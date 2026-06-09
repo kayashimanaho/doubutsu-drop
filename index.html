@@ -34,8 +34,13 @@ const { Engine, World, Bodies, Body, Events, Runner } = Matter;
 // ── Canvas ──────────────────────────────────────────────
 const W = 400, H = 680;
 const canvas = document.getElementById('c');
-canvas.width = W; canvas.height = H;
+const DPR = window.devicePixelRatio || 1;
+canvas.width  = W * DPR;
+canvas.height = H * DPR;
+canvas.style.width  = W + 'px';
+canvas.style.height = H + 'px';
 const ctx = canvas.getContext('2d');
+ctx.scale(DPR, DPR);
 
 // ── Layout constants ─────────────────────────────────────
 const WT = 14;          // wall thickness
