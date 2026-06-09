@@ -452,9 +452,11 @@ function drawAnimal(x, y, r, type, alpha = 1) {
 
   // Emoji
   const fs = Math.min(r * 1.25, 95);
-  ctx.font = `${fs}px sans-serif`;
+  ctx.font = `${fs}px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji','Twemoji Mozilla',sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#000';
+  ctx.globalCompositeOperation = 'source-over';
   ctx.fillText(an.emoji, 0, 2);
 
   ctx.restore();
@@ -586,7 +588,8 @@ function draw() {
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('つぎ', W/2, 28);
-  ctx.font = '40px sans-serif'; ctx.textBaseline = 'middle';
+  ctx.font = "40px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+  ctx.fillStyle = '#000'; ctx.textBaseline = 'middle';
   ctx.fillText(A[nxt].emoji, W/2, 68);
 
   // Mute button
@@ -623,7 +626,8 @@ function draw() {
       ctx.beginPath(); ctx.arc(x, y + 18, 22, 0, Math.PI*2);
       ctx.fillStyle = hexAlpha(an.col, 0.3); ctx.fill();
       ctx.strokeStyle = an.col; ctx.lineWidth = 2; ctx.stroke();
-      ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = "26px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+      ctx.fillStyle = '#000'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(an.emoji, x, y + 19);
       ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textBaseline = 'alphabetic';
       ctx.fillText(an.name, x + 50, y + 15);
@@ -649,7 +653,7 @@ function draw() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('ゲームオーバー！', W/2, H/2 - 90);
 
-    ctx.font = '56px sans-serif';
+    ctx.font = "56px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
     ctx.fillText('😢', W/2, H/2 - 30);
 
     ctx.fillStyle = '#ffe090';
