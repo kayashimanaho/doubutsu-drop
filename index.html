@@ -223,51 +223,152 @@ class Sound {
   }
 
   // ── BGM: catchy chiptune ─────────────────────────────────
+  // ── ノイズバッファ（ドラム用キャッシュ） ────────────────
+  _nbuf() {
+    if (this._noiseCache) return this._noiseCache;
+    const len = this.ac.sampleRate;
+    const buf = this.ac.createBuffer(1, len, this.ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    this._noiseCache = buf;
+    return buf;
+  }
+
+  // ── キック ────────────────────────────────────────────────
+  _kick(t) {
+    if (!this.ac || this.muted) return;
+    const osc = this.ac.createOscillator();
+    const env = this.ac.createGain();
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(36, t + 0.09);
+    env.gain.setValueAtTime(1.4, t);
+    env.gain.exponentialRampToValueAtTime(0.001, t + 0.30);
+    osc.connect(env); env.connect(this.comp);
+    osc.start(t); osc.stop(t + 0.32);
+  }
+
+  // ── スネア ────────────────────────────────────────────────
+  _snare(t) {
+    if (!this.ac || this.muted) return;
+    const src = this.ac.createBufferSource();
+    src.buffer = this._nbuf();
+    const bpf = this.ac.createBiquadFilter();
+    bpf.type = 'bandpass'; bpf.frequency.value = 1800; bpf.Q.value = 0.8;
+    const env = this.ac.createGain();
+    env.gain.setValueAtTime(0.7, t);
+    env.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+    src.connect(bpf); bpf.connect(env); env.connect(this.comp);
+    src.start(t); src.stop(t + 0.15);
+    // 胴鳴り
+    this._note(200, t, 0.06, 'triangle', 0.22, 0.001);
+  }
+
+  // ── ハイハット ────────────────────────────────────────────
+  _hat(t, vol = 0.18, dur = 0.035) {
+    if (!this.ac || this.muted) return;
+    const src = this.ac.createBufferSource();
+    src.buffer = this._nbuf();
+    const hpf = this.ac.createBiquadFilter();
+    hpf.type = 'highpass'; hpf.frequency.value = 7500;
+    const env = this.ac.createGain();
+    env.gain.setValueAtTime(vol, t);
+    env.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(hpf); hpf.connect(env); env.connect(this.comp);
+    src.start(t); src.stop(t + dur + 0.01);
+  }
+
+  // ── BGM: ダーク・エレクトロニック（Aマイナー, 126BPM） ──
   _bgm() {
     if (!this.bgmOn || !this.ac || this.muted) return;
-    const BPM = 132, b = 60 / BPM;
+    const BPM  = 126;
+    const b    = 60 / BPM;        // 1拍
+    const e    = b / 2;           // 8分
+    const s    = b / 4;           // 16分
+    const BARS = 4;
+    const now  = this.ac.currentTime + 0.04;
 
-    // Melody (freq, beat_start, beat_dur)
-    const mel = [
-      [523,0,.5],[659,.5,.5],[784,1,.5],[659,1.5,.5],
-      [523,2,.5],[440,2.5,.5],[523,3,1],
-      [587,4,.5],[784,4.5,.5],[880,5,.5],[784,5.5,.5],
-      [659,6,.75],[587,6.75,.25],[523,7,1],
-    ];
-    // Counter-melody
-    const ctr = [
-      [330,0,1],[294,1,1],[330,2,2],
-      [349,4,1],[330,5,1],[294,6,2],
-    ];
-    // Bass
-    const bass = [
-      [131,0,1],[131,1,1],[175,2,1],[196,3,1],
-      [131,4,1],[131,5,1],[110,6,1],[131,7,1],
-    ];
-    // Chords (quiet pad)
-    const chords = [
-      [[262,330,392],0,2], [[220,277,349],2,2],
-      [[262,330,392],4,2], [[196,262,330],6,2],
-    ];
+    // ── ドラム（4つ打ち + バックビートスネア） ─────────────
+    for (let bar = 0; bar < BARS; bar++) {
+      for (let beat = 0; beat < 4; beat++) {
+        const t = now + (bar * 4 + beat) * b;
+        this._kick(t);
+        if (beat === 1 || beat === 3) this._snare(t);
+        // クローズドハイハット（8分）
+        this._hat(t,     0.16, 0.03);
+        this._hat(t + e, 0.11, 0.025);
+        // オープンハイハット（スネア直前）
+        if (beat === 0 || beat === 2)
+          this._hat(t + e + s, 0.20, 0.10);
+      }
+    }
 
-    const play = (arr, type, vol, atk = 0.01) => arr.forEach(([f, sb, db]) =>
-      setTimeout(() => {
-        if (!this.bgmOn || !this.ac || this.muted) return;
-        this._note(f, this.ac.currentTime, db * b * 0.78, type, vol, atk);
-      }, sb * b * 1000)
-    );
+    // ── シンセベース（Aマイナー下降） ──────────────────────
+    // Am: A2=110, G2=98, E2=82.4, C3=130.8
+    // F:  F2=87.3, A2=110, C3=130.8
+    // E:  E2=82.4, B2=123.5, G#2=103.8
+    const bassLines = [
+      // bar0 Am: 8分×8
+      [110,110, 98, 110, 110, 82.4, 98, 110],
+      // bar1 Am variation
+      [110,130.8, 110, 98, 82.4, 98, 110, 130.8],
+      // bar2 F
+      [87.3,87.3, 110, 87.3, 87.3, 110, 130.8, 110],
+      // bar3 E
+      [82.4,82.4, 103.8, 123.5, 82.4, 82.4, 103.8, 82.4],
+    ];
+    bassLines.forEach((line, bar) => {
+      line.forEach((freq, i) => {
+        const t = now + (bar * 4 + i * 0.5) * b;
+        this._note(freq, t, e * 0.85, 'sawtooth', 0.18, 0.008);
+      });
+    });
 
-    play(mel,  'triangle', 0.065);
-    play(ctr,  'sine',     0.035, 0.02);
-    play(bass, 'sine',     0.08,  0.015);
-    chords.forEach(([notes, sb, db]) => notes.forEach(f =>
-      setTimeout(() => {
-        if (!this.bgmOn || !this.ac || this.muted) return;
-        this._note(f, this.ac.currentTime, db * b * 0.88, 'sine', 0.022, 0.03);
-      }, sb * b * 1000)
-    ));
+    // ── シンセアルペジオ（16分音符、電子的） ───────────────
+    const arpSeqs = [
+      // bar0 Am 上昇→下降
+      [440,523,659,784, 880,784,659,523, 440,523,659,784, 880,784,659,523],
+      // bar1 Am 高域バリエーション
+      [523,659,784,880, 784,659,523,440, 392,440,523,659, 784,659,523,440],
+      // bar2 F
+      [349,440,523,698, 784,698,523,440, 349,440,523,698, 784,698,523,440],
+      // bar3 E → Am解決
+      [330,415,494,659, 659,494,415,330, 330,415,494,659, 698,659,523,440],
+    ];
+    arpSeqs.forEach((seq, bar) => {
+      seq.forEach((freq, i) => {
+        const t = now + (bar * 4 + i * 0.25) * b;
+        this._note(freq, t, s * 0.78, 'square', 0.048, 0.003);
+      });
+    });
 
-    this.bgmTid = setTimeout(() => this._bgm(), 8 * b * 1000);
+    // ── サブリード（1拍ごとのシンセ）────────────────────────
+    const lead = [
+      // bar0 Am
+      [440,0],[523,1],[659,2],[523,3],
+      // bar1
+      [440,4],[392,5],[440,6],[523,7],
+      // bar2 F
+      [349,8],[440,9],[523,10],[440,11],
+      // bar3 E
+      [330,12],[415,13],[494,14],[440,15],
+    ];
+    lead.forEach(([freq, beat]) => {
+      const t = now + beat * b;
+      this._note(freq,       t, b * 0.7,  'triangle', 0.07, 0.01);
+      this._note(freq * 2,   t, b * 0.5,  'sine',     0.03, 0.01);
+    });
+
+    // ── パッド（コード、薄く持続） ────────────────────────────
+    [
+      [[220, 261.6, 329.6, 392], 0, 2],  // Am7
+      [[174.6, 220, 261.6, 329.6], 2, 1], // Fmaj
+      [[164.8, 207.7, 246.9, 329.6], 3, 1], // Em
+    ].forEach(([notes, bar, dur]) => {
+      const t = now + bar * 4 * b;
+      notes.forEach(f => this._note(f, t, dur * 4 * b * 0.92, 'sine', 0.032, 0.06));
+    });
+
+    this.bgmTid = setTimeout(() => this._bgm(), BARS * 4 * b * 1000);
   }
 }
 const snd = new Sound();
