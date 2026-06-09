@@ -81,12 +81,14 @@ World.add(world, [
 let score = 0;
 let hi    = +localStorage.getItem('doub_hi') || 0;
 let over  = false;
-let dropping = false;
+let started   = false;  // タップtoスタート
+let dropping  = false;
+let touching  = false;  // スマホ：押している間true
 let mx    = W / 2;
 let cur   = rnd3(), nxt = rnd3();
 let parts = [];
 let overTimer = 0;
-let flashList = [];   // { x, y, txt, life, col }
+let flashList = [];
 let showEvolution = false;
 
 function rnd3() { return Math.floor(Math.random() * 3); }
@@ -342,39 +344,61 @@ function clampX() {
   const r = A[cur].r;
   return Math.max(LX + r + 2, Math.min(RX - r - 2, mx));
 }
-
-canvas.addEventListener('mousemove', e => {
+function toCanvas(clientX, clientY) {
   const rc = canvas.getBoundingClientRect();
-  mx = (e.clientX - rc.left) * (W / rc.width);
+  return [(clientX - rc.left) * (W / rc.width), (clientY - rc.top) * (H / rc.height)];
+}
+
+// ── マウス（デスクトップ）──
+canvas.addEventListener('mousemove', e => {
+  mx = toCanvas(e.clientX, e.clientY)[0];
 });
+canvas.addEventListener('click', e => {
+  snd.boot();
+  const [cx, cy] = toCanvas(e.clientX, e.clientY);
+  if (!started) { started = true; return; }
+  if (over)         { handleOverClick(cx, cy); return; }
+  if (showEvolution){ showEvolution = false; return; }
+  if (handleUIClick(cx, cy)) return;
+  if (!dropping) drop();
+});
+
+// ── タッチ（スマホ）スイカゲーム方式 ──
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  snd.boot();
+  const t = e.touches[0];
+  const [cx, cy] = toCanvas(t.clientX, t.clientY);
+  if (!started) { started = true; return; }
+  if (over)          { handleOverClick(cx, cy); return; }
+  if (showEvolution) { showEvolution = false; return; }
+  if (handleUIClick(cx, cy)) return;
+  touching = true;
+  mx = cx;
+}, { passive: false });
+
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
-  const rc = canvas.getBoundingClientRect();
-  mx = (e.touches[0].clientX - rc.left) * (W / rc.width);
+  if (!touching) return;
+  mx = toCanvas(e.touches[0].clientX, e.touches[0].clientY)[0];
 }, { passive: false });
-canvas.addEventListener('click',    e  => handleInput(e));
-canvas.addEventListener('touchend', e  => { e.preventDefault(); handleInput(e.changedTouches[0]); }, { passive: false });
 
-function handleInput(e) {
-  snd.boot();
-  if (over) {
-    // Check restart button
-    const rc = canvas.getBoundingClientRect();
-    const cx = (e.clientX - rc.left) * (W / rc.width);
-    const cy = (e.clientY - rc.top)  * (H / rc.height);
-    if (cx > W/2-90 && cx < W/2+90 && cy > H/2+65 && cy < H/2+115) restart();
-    return;
-  }
-  // Toggle mute (bottom-left of UI)
-  const rc2 = canvas.getBoundingClientRect();
-  const tx = (e.clientX - rc2.left) * (W / rc2.width);
-  const ty = (e.clientY - rc2.top)  * (H / rc2.height);
-  if (tx > 10 && tx < 46 && ty > 74 && ty < 98) { snd.toggleMute(); return; }
-  // Toggle evolution chart (top-right corner)
-  if (tx > W - 50 && ty < 50) { showEvolution = !showEvolution; return; }
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (!touching) return;
+  touching = false;
+  if (!dropping) drop();
+}, { passive: false });
 
-  if (dropping) return;
-  drop();
+canvas.addEventListener('touchcancel', e => { touching = false; }, { passive: false });
+
+function handleOverClick(cx, cy) {
+  if (cx > W/2-90 && cx < W/2+90 && cy > H/2+65 && cy < H/2+115) restart();
+}
+function handleUIClick(cx, cy) {
+  if (cx > 10 && cx < 46 && cy > 74 && cy < 98) { snd.toggleMute(); return true; }
+  if (cx > W-50 && cy < 50) { showEvolution = !showEvolution; return true; }
+  return false;
 }
 
 function drop() {
@@ -500,20 +524,39 @@ function draw() {
   ctx.restore();
 
   // ── Drop guide ──
-  if (!over && !showEvolution) {
+  if (!over && !showEvolution && started) {
     const dx = clampX();
     const r  = A[cur].r;
+    const holdAlpha = touching ? 0.95 : 0.75;
     // Vertical guide
     ctx.save();
-    ctx.strokeStyle = 'rgba(150, 80, 220, 0.2)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = touching ? 'rgba(255,180,80,0.5)' : 'rgba(150,80,220,0.2)';
+    ctx.lineWidth = touching ? 2 : 1.5;
     ctx.setLineDash([5, 5]);
     ctx.beginPath(); ctx.moveTo(dx, DLINE + r + 2); ctx.lineTo(dx, FLOOR_Y - 2); ctx.stroke();
     ctx.setLineDash([]);
     ctx.restore();
 
-    // Preview animal (ghosted)
-    if (!dropping) drawAnimal(dx, DLINE, r, cur, 0.75);
+    // Preview animal（押している間は大きく・明るく）
+    if (!dropping) {
+      const scale = touching ? 1.08 : 1;
+      ctx.save();
+      ctx.translate(dx, DLINE);
+      ctx.scale(scale, scale);
+      ctx.translate(-dx, -DLINE);
+      drawAnimal(dx, DLINE, r, cur, holdAlpha);
+      ctx.restore();
+    }
+
+    // スマホ向けヒント（最初の数秒）
+    if (touching) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,200,80,0.85)';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('はなすと落とす！', dx, DLINE - r - 18);
+      ctx.restore();
+    }
   }
 
   // ── Physics animals ──
@@ -684,6 +727,41 @@ function draw() {
       ctx.font = '36px sans-serif';
       ctx.fillText('⭐'.repeat(stars), W/2, H/2 - 145);
     }
+    return;
+  }
+
+  // ── スタート画面 ──
+  if (!started) {
+    ctx.fillStyle = 'rgba(20,10,50,0.82)';
+    ctx.fillRect(0, 0, W, H);
+
+    // タイトル
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('どうぶつドロップ', W/2, H/2 - 110);
+
+    // アニマル行進
+    const preview = [0,1,2,3,4];
+    preview.forEach((type, i) => {
+      const px = W/2 - 80 + i * 40;
+      drawAnimal(px, H/2 - 50, A[type].r * 0.6, type, 1);
+    });
+
+    // タップボタン
+    const bg = ctx.createLinearGradient(W/2-110, 0, W/2+110, 0);
+    bg.addColorStop(0, '#a855f7'); bg.addColorStop(1, '#ec4899');
+    ctx.fillStyle = bg;
+    rrect(W/2-110, H/2+10, 220, 60, 30); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText('タップしてスタート！', W/2, H/2 + 40);
+
+    // 操作説明
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = '15px sans-serif';
+    ctx.fillText('📱 押しながら動かして、はなすと落とす', W/2, H/2 + 100);
+    ctx.fillText('🖱️ マウスで動かして、クリックで落とす', W/2, H/2 + 125);
   }
 }
 
@@ -705,7 +783,7 @@ let lastT = performance.now();
 function loop(now) {
   const dt = now - lastT; lastT = now;
 
-  if (!over && !showEvolution) checkOver(dt);
+  if (!over && !showEvolution && started) checkOver(dt);
 
   // Update particles
   for (const p of parts) {
