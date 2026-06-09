@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>どうぶつドロップ</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: radial-gradient(ellipse at center, #2d1b69 0%, #1a0f40 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+      touch-action: none;
+    }
+    canvas {
+      display: block;
+      cursor: none;
+      border-radius: 18px;
+      box-shadow: 0 0 60px rgba(180, 100, 255, 0.5), 0 20px 40px rgba(0,0,0,0.6);
+    }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script>
+'use strict';
+const { Engine, World, Bodies, Body, Events, Runner } = Matter;
+
+// ── Canvas ──────────────────────────────────────────────
+const W = 400, H = 680;
+const canvas = document.getElementById('c');
+canvas.width = W; canvas.height = H;
+const ctx = canvas.getContext('2d');
+
+// ── Layout constants ─────────────────────────────────────
+const WT = 14;          // wall thickness
+const LX = WT;          // left wall inner x
+const RX = W - WT;      // right wall inner x
+const GW = RX - LX;     // game area width
+const UI  = 105;        // UI panel height
+const FLOOR_Y = H - WT; // floor y
+const DLINE   = UI + 12;// drop y (preview center)
+const DANGER  = UI + 22;// game-over danger line
+
+// ── Animal definitions ────────────────────────────────────
+const A = [
+  { name:'ひよこ',      emoji:'🐥', r:20,  col:'#FFE040', pts:1  },
+  { name:'ウサギ',      emoji:'🐰', r:28,  col:'#FFB6C1', pts:3  },
+  { name:'ネコ',        emoji:'🐱', r:37,  col:'#FF9040', pts:6  },
+  { name:'イヌ',        emoji:'🐶', r:47,  col:'#C89050', pts:10 },
+  { name:'コアラ',      emoji:'🐨', r:58,  col:'#909090', pts:15 },
+  { name:'パンダ',      emoji:'🐼', r:70,  col:'#E8E8E8', pts:21 },
+  { name:'ライオン',    emoji:'🦁', r:83,  col:'#FFC020', pts:28 },
+  { name:'ゾウ',        emoji:'🐘', r:97,  col:'#8080B0', pts:36 },
+  { name:'きょうりゅう',emoji:'🦕', r:112, col:'#50C050', pts:45 },
+  { name:'ドラゴン',    emoji:'🐉', r:128, col:'#FF4060', pts:55 },
+];
+
+// ── Physics engine ────────────────────────────────────────
+const engine = Engine.create({ gravity: { y: 1.8 } });
+const world  = engine.world;
+
+World.add(world, [
+  Bodies.rectangle(W/2,    H - WT/2,  W + 4, WT,     { isStatic:true, label:'wall', friction:0.9, restitution:0.1 }),
+  Bodies.rectangle(LX/2,   H/2,       WT,    H*2,    { isStatic:true, label:'wall' }),
+  Bodies.rectangle(W-WT/2, H/2,       WT,    H*2,    { isStatic:true, label:'wall' }),
+  Bodies.rectangle(W/2,    -WT/2,     W + 4, WT,     { isStatic:true, label:'ceil' }),
+]);
+
+// ── Game state ────────────────────────────────────────────
+let score = 0;
+let hi    = +localStorage.getItem('doub_hi') || 0;
+let over  = false;
+let dropping = false;
+let mx    = W / 2;
+let cur   = rnd3(), nxt = rnd3();
+let parts = [];
+let overTimer = 0;
+let flashList = [];   // { x, y, txt, life, col }
+let showEvolution = false;
+
+function rnd3() { return Math.floor(Math.random() * 3); }
+
+// ── Audio System ───────────────────────────────────────────
+class Sound {
+  constructor() {
+    this.ac      = null;
+    this.comp    = null;
+    this.muted   = false;
+    this.bgmOn   = false;
+    this.bgmTid  = null;
+    this.comboN  = 0;
+    this.comboTid = null;
+    this.achieved = new Set();
+  }
+
+  boot() {
+    if (this.ac) { if (this.ac.state === 'suspended') this.ac.resume(); return; }
+    this.ac   = new (window.AudioContext || window.webkitAudioContext)();
+    this.comp = this.ac.createDynamicsCompressor();
+    this.comp.threshold.value = -18;
+    this.comp.ratio.value     = 4;
+    this.comp.connect(this.ac.destination);
+    this.bgmOn = true;
+    this._bgm();
+  }
+
+  // ── primitive ───────────────────────────────────────────
+  _note(freq, start, dur, type, vol, atk = 0.005) {
+    if (!this.ac || this.muted) return;
+    try {
+      const osc = this.ac.createOscillator();
+      const env = this.ac.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, start);
+      env.gain.setValueAtTime(0,   start);
+      env.gain.linearRampToValueAtTime(vol, start + atk);
+      env.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      osc.connect(env); env.connect(this.comp);
+      osc.start(start); osc.stop(start + dur + 0.02);
+    } catch(e) {}
+  }
+
+  // ── sound events ────────────────────────────────────────
+  drop() {
+    if (!this.ac || this.muted) return;
+    const t = this.ac.currentTime;
+    this._note(200, t,       0.13, 'sine',     0.22, 0.003);
+    this._note(140, t + 0.02,0.09, 'triangle', 0.10, 0.003);
+  }
+
+  merge(level) {
+    if (!this.ac || this.muted) return;
+    if (level >= A.length - 1) { this._dragon(); return; }
+
+    // combo tracking
+    this.comboN++;
+    clearTimeout(this.comboTid);
+    this.comboTid = setTimeout(() => { this.comboN = 0; }, 950);
+
+    // C major scale mapped per level
+    const scale = [262, 294, 330, 370, 392, 440, 494, 523, 587, 659];
+    const f   = scale[level];
+    const t   = this.ac.currentTime;
+    const vol = Math.min(0.55, 0.28 + level * 0.028 + Math.min(this.comboN, 4) * 0.04);
+    const dur = 0.18 + level * 0.016;
+
+    // root + fifth + octave chord (juicy!)
+    this._note(f,       t,        dur,       'sine',     vol,       0.004);
+    this._note(f * 1.5, t,        dur * 0.7, 'sine',     vol * 0.38,0.004);
+    this._note(f * 2,   t + 0.02, dur * 0.5, 'triangle', vol * 0.22,0.003);
+    if (level >= 4) this._note(f * 1.25, t, dur * 0.55, 'sine', vol * 0.18, 0.005);
+    if (level >= 7) this._note(f * 3,    t + 0.03, dur * 0.35, 'sine', vol * 0.12, 0.003);
+
+    // ── combo arpeggio ────────────────────────────────────
+    if (this.comboN >= 2) {
+      const steps = [1.25, 1.5, 1.75, 2, 2.5].slice(0, this.comboN - 1);
+      steps.forEach((r, i) => setTimeout(() => {
+        if (!this.ac || this.muted) return;
+        this._note(f * r, this.ac.currentTime, 0.09, 'sine', 0.18, 0.003);
+      }, 75 + i * 65));
+    }
+
+    // ── first-time achievement jingle ────────────────────
+    if (level >= 3 && !this.achieved.has(level)) {
+      this.achieved.add(level);
+      [1, 1.25, 1.5, 2].forEach((r, i) => setTimeout(() => {
+        if (!this.ac || this.muted) return;
+        const ct = this.ac.currentTime;
+        this._note(f * r,     ct, 0.14, 'sine',     0.25, 0.004);
+        this._note(f * r * 2, ct, 0.09, 'triangle', 0.10, 0.003);
+      }, 160 + i * 80));
+    }
+  }
+
+  _dragon() {
+    if (!this.ac || this.muted) return;
+    // Rising fanfare: C E G C' E' G' C''
+    [[523,0],[659,0.1],[784,0.2],[1047,0.35],[1319,0.52],[1568,0.7],[2093,0.92]]
+      .forEach(([f, d]) => setTimeout(() => {
+        if (!this.ac || this.muted) return;
+        const t = this.ac.currentTime;
+        this._note(f,       t, 0.22, 'sine',     0.45, 0.005);
+        this._note(f * 1.5, t, 0.16, 'triangle', 0.18, 0.005);
+      }, d * 1000));
+  }
+
+  gameOver() {
+    if (!this.ac) return;
+    this.bgmOn = false; clearTimeout(this.bgmTid);
+    // Sad descending melody
+    [[523,0],[466,0.22],[415,0.46],[370,0.72],[330,1.02],[262,1.38]]
+      .forEach(([f, d]) => setTimeout(() => {
+        if (!this.ac) return;
+        const t = this.ac.currentTime;
+        this._note(f,       t, 0.38, 'sawtooth', 0.18, 0.012);
+        this._note(f * 0.5, t, 0.38, 'sine',     0.12, 0.012);
+      }, d * 1000));
+  }
+
+  restart() {
+    this.comboN = 0; this.achieved.clear();
+    this.bgmOn = true; this._bgm();
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    if (this.muted) { this.bgmOn = false; clearTimeout(this.bgmTid); }
+    else            { this.bgmOn = true;  this._bgm(); }
+    return this.muted;
+  }
+
+  // ── BGM: catchy chiptune ─────────────────────────────────
+  _bgm() {
+    if (!this.bgmOn || !this.ac || this.muted) return;
+    const BPM = 132, b = 60 / BPM;
+
+    // Melody (freq, beat_start, beat_dur)
+    const mel = [
+      [523,0,.5],[659,.5,.5],[784,1,.5],[659,1.5,.5],
+      [523,2,.5],[440,2.5,.5],[523,3,1],
+      [587,4,.5],[784,4.5,.5],[880,5,.5],[784,5.5,.5],
+      [659,6,.75],[587,6.75,.25],[523,7,1],
+    ];
+    // Counter-melody
+    const ctr = [
+      [330,0,1],[294,1,1],[330,2,2],
+      [349,4,1],[330,5,1],[294,6,2],
+    ];
+    // Bass
+    const bass = [
+      [131,0,1],[131,1,1],[175,2,1],[196,3,1],
+      [131,4,1],[131,5,1],[110,6,1],[131,7,1],
+    ];
+    // Chords (quiet pad)
+    const chords = [
+      [[262,330,392],0,2], [[220,277,349],2,2],
+      [[262,330,392],4,2], [[196,262,330],6,2],
+    ];
+
+    const play = (arr, type, vol, atk = 0.01) => arr.forEach(([f, sb, db]) =>
+      setTimeout(() => {
+        if (!this.bgmOn || !this.ac || this.muted) return;
+        this._note(f, this.ac.currentTime, db * b * 0.78, type, vol, atk);
+      }, sb * b * 1000)
+    );
+
+    play(mel,  'triangle', 0.065);
+    play(ctr,  'sine',     0.035, 0.02);
+    play(bass, 'sine',     0.08,  0.015);
+    chords.forEach(([notes, sb, db]) => notes.forEach(f =>
+      setTimeout(() => {
+        if (!this.bgmOn || !this.ac || this.muted) return;
+        this._note(f, this.ac.currentTime, db * b * 0.88, 'sine', 0.022, 0.03);
+      }, sb * b * 1000)
+    ));
+
+    this.bgmTid = setTimeout(() => this._bgm(), 8 * b * 1000);
+  }
+}
+const snd = new Sound();
+
+// ── Body creation ─────────────────────────────────────────
+function mkAnimal(x, y, type) {
+  const b = Bodies.circle(x, y, A[type].r, {
+    restitution: 0.22,
+    friction:    0.65,
+    frictionAir: 0.009,
+    density:     0.003,
+    label: 'animal',
+  });
+  b.atype  = type;
+  b.merged = false;
+  World.add(world, b);
+  return b;
+}
+
+// ── Merge collision ───────────────────────────────────────
+Events.on(engine, 'collisionStart', e => {
+  if (over) return;
+  for (const { bodyA: a, bodyB: b } of e.pairs) {
+    if (a.label !== 'animal' || b.label !== 'animal') continue;
+    if (a.atype !== b.atype) continue;
+    if (a.atype >= A.length - 1) continue;
+    if (a.merged || b.merged) continue;
+    a.merged = b.merged = true;
+
+    const nt = a.atype + 1;
+    const mx2 = (a.position.x + b.position.x) / 2;
+    const my2 = (a.position.y + b.position.y) / 2;
+
+    setTimeout(() => {
+      if (!world.bodies.includes(a) || !world.bodies.includes(b)) return;
+      World.remove(world, a);
+      World.remove(world, b);
+      const nb = mkAnimal(mx2, my2, nt);
+      Body.setVelocity(nb, { x: 0, y: -4 });
+      burst(mx2, my2, A[nt].col, nt >= 7 ? 24 : 14);
+      score += A[nt].pts;
+      if (score > hi) { hi = score; localStorage.setItem('doub_hi', hi); }
+      flashList.push({ x: mx2, y: my2 - A[nt].r - 10, txt: `+${A[nt].pts}`, life: 1.2, col: A[nt].col });
+      snd.merge(nt);
+    }, 30);
+  }
+});
+
+// ── Particles ─────────────────────────────────────────────
+function burst(x, y, col, n = 14) {
+  for (let i = 0; i < n; i++) {
+    const angle = Math.PI * 2 * i / n + Math.random() * 0.3;
+    const spd   = 3 + Math.random() * 6;
+    parts.push({
+      x, y,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd - 2,
+      life: 1,
+      col,
+      sz: 4 + Math.random() * 6,
+    });
+  }
+  // Star sparkle for big merges
+  if (n >= 20) {
+    for (let i = 0; i < 8; i++) {
+      const a = Math.PI * 2 * i / 8;
+      parts.push({ x, y, vx: Math.cos(a)*10, vy: Math.sin(a)*10 - 3, life:0.8, col:'#FFD700', sz:8, star:true });
+    }
+  }
+}
+
+// ── Input ─────────────────────────────────────────────────
+function clampX() {
+  const r = A[cur].r;
+  return Math.max(LX + r + 2, Math.min(RX - r - 2, mx));
+}
+
+canvas.addEventListener('mousemove', e => {
+  const rc = canvas.getBoundingClientRect();
+  mx = (e.clientX - rc.left) * (W / rc.width);
+});
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const rc = canvas.getBoundingClientRect();
+  mx = (e.touches[0].clientX - rc.left) * (W / rc.width);
+}, { passive: false });
+canvas.addEventListener('click',    e  => handleInput(e));
+canvas.addEventListener('touchend', e  => { e.preventDefault(); handleInput(e.changedTouches[0]); }, { passive: false });
+
+function handleInput(e) {
+  snd.boot();
+  if (over) {
+    // Check restart button
+    const rc = canvas.getBoundingClientRect();
+    const cx = (e.clientX - rc.left) * (W / rc.width);
+    const cy = (e.clientY - rc.top)  * (H / rc.height);
+    if (cx > W/2-90 && cx < W/2+90 && cy > H/2+65 && cy < H/2+115) restart();
+    return;
+  }
+  // Toggle mute (bottom-left of UI)
+  const rc2 = canvas.getBoundingClientRect();
+  const tx = (e.clientX - rc2.left) * (W / rc2.width);
+  const ty = (e.clientY - rc2.top)  * (H / rc2.height);
+  if (tx > 10 && tx < 46 && ty > 74 && ty < 98) { snd.toggleMute(); return; }
+  // Toggle evolution chart (top-right corner)
+  if (tx > W - 50 && ty < 50) { showEvolution = !showEvolution; return; }
+
+  if (dropping) return;
+  drop();
+}
+
+function drop() {
+  mkAnimal(clampX(), DLINE - 4, cur);
+  snd.drop();
+  cur = nxt; nxt = rnd3();
+  dropping = true;
+  setTimeout(() => { dropping = false; }, 520);
+}
+
+function restart() {
+  [...world.bodies].filter(b => b.label === 'animal').forEach(b => World.remove(world, b));
+  parts = []; flashList = [];
+  score = 0; over = false; dropping = false; overTimer = 0;
+  cur = rnd3(); nxt = rnd3();
+  snd.restart();
+}
+
+// ── Game-over detection ───────────────────────────────────
+function checkOver(dt) {
+  const danger = world.bodies.filter(b =>
+    b.label === 'animal' &&
+    b.position.y - b.circleRadius < DANGER &&
+    Math.abs(b.velocity.y) < 1.0 &&
+    Math.abs(b.velocity.x) < 1.0
+  );
+  if (danger.length > 0) {
+    overTimer += dt;
+    if (overTimer > 2000) { over = true; snd.gameOver(); }
+  } else {
+    overTimer = Math.max(0, overTimer - dt * 2);
+  }
+}
+
+// ── Color helpers ─────────────────────────────────────────
+function tint(hex, n) {
+  const r = clamp8(parseInt(hex.slice(1,3),16) + n);
+  const g = clamp8(parseInt(hex.slice(3,5),16) + n);
+  const b = clamp8(parseInt(hex.slice(5,7),16) + n);
+  return `rgb(${r},${g},${b})`;
+}
+function clamp8(v) { return Math.max(0, Math.min(255, v)); }
+function hexAlpha(hex, a) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// ── Rounded rect ──────────────────────────────────────────
+function rrect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+// ── Draw animal body ──────────────────────────────────────
+function drawAnimal(x, y, r, type, alpha = 1) {
+  const an = A[type];
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+
+  // Shadow
+  ctx.beginPath(); ctx.arc(3, 3, r, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fill();
+
+  // Gradient circle
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+  const g = ctx.createRadialGradient(-r*.3, -r*.35, r*.05, 0, 0, r);
+  g.addColorStop(0, tint(an.col,  60));
+  g.addColorStop(1, tint(an.col, -10));
+  ctx.fillStyle = g; ctx.fill();
+  ctx.strokeStyle = tint(an.col, -30);
+  ctx.lineWidth = 2.5; ctx.stroke();
+
+  // Emoji
+  const fs = Math.min(r * 1.25, 95);
+  ctx.font = `${fs}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(an.emoji, 0, 2);
+
+  ctx.restore();
+}
+
+// ── Main render ───────────────────────────────────────────
+function draw() {
+  // ── Background ──
+  const bg = ctx.createLinearGradient(0, UI, 0, H);
+  bg.addColorStop(0, '#fff0ff');
+  bg.addColorStop(1, '#ffe0f5');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // ── Walls ──
+  ctx.fillStyle = '#b080d8';
+  ctx.fillRect(0,    UI, WT, H-UI);
+  ctx.fillRect(RX,   UI, WT, H-UI);
+  ctx.fillRect(0, FLOOR_Y, W, WT);
+
+  // Wall shine
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.fillRect(2, UI, 4, H-UI);
+  ctx.fillRect(RX+2, UI, 4, H-UI);
+
+  // ── Game area bg ──
+  ctx.fillStyle = 'rgba(255,248,255,0.75)';
+  ctx.fillRect(LX, UI, GW, FLOOR_Y - UI);
+
+  // ── Danger line ──
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 80, 80, 0.35)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 6]);
+  ctx.beginPath(); ctx.moveTo(LX, DANGER); ctx.lineTo(RX, DANGER); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // ── Drop guide ──
+  if (!over && !showEvolution) {
+    const dx = clampX();
+    const r  = A[cur].r;
+    // Vertical guide
+    ctx.save();
+    ctx.strokeStyle = 'rgba(150, 80, 220, 0.2)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath(); ctx.moveTo(dx, DLINE + r + 2); ctx.lineTo(dx, FLOOR_Y - 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Preview animal (ghosted)
+    if (!dropping) drawAnimal(dx, DLINE, r, cur, 0.75);
+  }
+
+  // ── Physics animals ──
+  for (const b of world.bodies) {
+    if (b.label !== 'animal' || b.isStatic) continue;
+    ctx.save();
+    ctx.translate(b.position.x, b.position.y);
+    ctx.rotate(b.angle);
+    drawAnimal(0, 0, b.circleRadius, b.atype);
+    ctx.restore();
+  }
+
+  // ── Particles ──
+  for (const p of parts) {
+    const a = Math.max(0, p.life);
+    ctx.beginPath();
+    if (p.star) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      drawStar(0, 0, p.sz * a * 0.6, p.sz * a * 1.4, 5);
+      ctx.fillStyle = hexAlpha(p.col, a);
+      ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.arc(p.x, p.y, Math.max(0.1, p.sz * a), 0, Math.PI*2);
+      ctx.fillStyle = hexAlpha(p.col, a);
+      ctx.fill();
+    }
+  }
+
+  // ── Score floaters ──
+  for (const f of flashList) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, f.life);
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = f.col;
+    ctx.shadowBlur = 8;
+    ctx.fillText(f.txt, f.x, f.y);
+    ctx.restore();
+  }
+
+  // ── UI Panel ──
+  const uig = ctx.createLinearGradient(0, 0, 0, UI);
+  uig.addColorStop(0, '#6020c0');
+  uig.addColorStop(1, '#8040d8');
+  ctx.fillStyle = uig; ctx.fillRect(0, 0, W, UI);
+
+  // Top border glow
+  ctx.fillStyle = 'rgba(200,150,255,0.5)'; ctx.fillRect(0, UI - 3, W, 3);
+
+  // Score box
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  rrect(10, 10, 115, 80, 10); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('スコア', 67, 33);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 30px sans-serif';
+  ctx.fillText(score.toLocaleString(), 67, 72);
+
+  // Hi score box
+  ctx.fillStyle = 'rgba(255,220,0,0.15)';
+  rrect(W-125, 10, 115, 80, 10); ctx.fill();
+  ctx.fillStyle = 'rgba(255,220,100,0.8)';
+  ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('さいこうきろく', W-67, 30);
+  ctx.fillStyle = '#ffe090';
+  ctx.font = 'bold 26px sans-serif';
+  ctx.fillText(hi.toLocaleString(), W-67, 72);
+
+  // Next box
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  rrect(W/2-38, 8, 76, 84, 10); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('つぎ', W/2, 28);
+  ctx.font = '40px sans-serif'; ctx.textBaseline = 'middle';
+  ctx.fillText(A[nxt].emoji, W/2, 68);
+
+  // Mute button
+  ctx.fillStyle = snd.muted ? 'rgba(255,80,80,0.4)' : 'rgba(255,255,255,0.18)';
+  rrect(10, 74, 36, 24, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.font = '15px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(snd.muted ? '🔇' : '🔊', 28, 86);
+
+  // Evolution hint button
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  rrect(W-46, 4, 38, 28, 8); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('図鑑', W-27, 18);
+
+  // ── Evolution chart overlay ──
+  if (showEvolution) {
+    ctx.fillStyle = 'rgba(20, 10, 50, 0.92)';
+    rrect(20, 20, W-40, H-40, 16); ctx.fill();
+    ctx.strokeStyle = 'rgba(180,100,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText('しんかひょう', W/2, 60);
+    ctx.font = '13px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('タップでとじる', W/2, 80);
+    const cols = 2;
+    A.forEach((an, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = 60 + col * 175;
+      const y = 110 + row * 57;
+      // circle bg
+      ctx.beginPath(); ctx.arc(x, y + 18, 22, 0, Math.PI*2);
+      ctx.fillStyle = hexAlpha(an.col, 0.3); ctx.fill();
+      ctx.strokeStyle = an.col; ctx.lineWidth = 2; ctx.stroke();
+      ctx.font = '26px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(an.emoji, x, y + 19);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textBaseline = 'alphabetic';
+      ctx.fillText(an.name, x + 50, y + 15);
+      ctx.fillStyle = '#ffe090'; ctx.font = '12px sans-serif';
+      ctx.fillText(`${an.pts}pt`, x + 50, y + 33);
+      if (i < A.length - 1) {
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '16px sans-serif';
+        ctx.textBaseline = 'middle';
+        if (col === 0) ctx.fillText('→', x + 100, y + 18);
+        else { ctx.fillText('↓', 35, y + 50); }
+      }
+    });
+    return;
+  }
+
+  // ── Game over overlay ──
+  if (over) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 42px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('ゲームオーバー！', W/2, H/2 - 90);
+
+    ctx.font = '56px sans-serif';
+    ctx.fillText('😢', W/2, H/2 - 30);
+
+    ctx.fillStyle = '#ffe090';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.fillText(`スコア: ${score.toLocaleString()}`, W/2, H/2 + 35);
+    ctx.fillStyle = '#aaa';
+    ctx.font = '20px sans-serif';
+    ctx.fillText(`さいこうきろく: ${hi.toLocaleString()}`, W/2, H/2 + 70);
+
+    const bx = W/2 - 90, by = H/2 + 90;
+    const rbg = ctx.createLinearGradient(bx, 0, bx+180, 0);
+    rbg.addColorStop(0, '#ff6b9d'); rbg.addColorStop(1, '#ff9b6b');
+    ctx.fillStyle = rbg;
+    rrect(bx, by, 180, 52, 26); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 22px sans-serif'; ctx.textBaseline = 'middle';
+    ctx.fillText('もう一度あそぶ！', W/2, by + 26);
+
+    // Scores summary
+    if (score > 0) {
+      const maxPts = A.reduce((s,a) => s+a.pts, 0) * 3;
+      const stars = score >= maxPts * 0.7 ? 3 : score >= maxPts * 0.35 ? 2 : 1;
+      ctx.font = '36px sans-serif';
+      ctx.fillText('⭐'.repeat(stars), W/2, H/2 - 145);
+    }
+  }
+}
+
+function drawStar(x, y, r1, r2, n) {
+  ctx.beginPath();
+  for (let i = 0; i < n * 2; i++) {
+    const a = (Math.PI * i / n) - Math.PI / 2;
+    const r = i % 2 === 0 ? r2 : r1;
+    if (i === 0) ctx.moveTo(x + Math.cos(a)*r, y + Math.sin(a)*r);
+    else ctx.lineTo(x + Math.cos(a)*r, y + Math.sin(a)*r);
+  }
+  ctx.closePath();
+}
+
+// ── Game loop ─────────────────────────────────────────────
+Runner.run(Runner.create(), engine);
+
+let lastT = performance.now();
+function loop(now) {
+  const dt = now - lastT; lastT = now;
+
+  if (!over && !showEvolution) checkOver(dt);
+
+  // Update particles
+  for (const p of parts) {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.22; p.vx *= 0.93;
+    p.life -= 0.028;
+  }
+  parts = parts.filter(p => p.life > 0);
+
+  // Update score floaters
+  for (const f of flashList) { f.y -= 1.2; f.life -= 0.035; }
+  flashList = flashList.filter(f => f.life > 0);
+
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ── Responsive sizing ─────────────────────────────────────
+function resize() {
+  const s = Math.min(window.innerWidth / W, window.innerHeight / H) * 0.97;
+  canvas.style.width  = W * s + 'px';
+  canvas.style.height = H * s + 'px';
+}
+window.addEventListener('resize', resize);
+resize();
+</script>
+</body>
+</html>
