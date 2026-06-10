@@ -1199,7 +1199,7 @@ function handleUIClick(cx, cy) {
 
 function drop() {
   bombDropCount++;
-  if (bombDropCount >= 20 && Math.random() < 0.4) {
+  if (bombDropCount >= 50 && Math.random() < 0.15) {
     bombDropCount = 0;
     mkBomb(clampX(), DLINE - 4);
   } else {
