@@ -22,11 +22,66 @@
       border-radius: 18px;
       box-shadow: 0 0 60px rgba(180, 100, 255, 0.5), 0 20px 40px rgba(0,0,0,0.6);
     }
+    #gameWrap { position: relative; display: inline-block; }
+    #nameOverlay {
+      display: none;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.78);
+      justify-content: center; align-items: center;
+      z-index: 20; border-radius: 18px;
+    }
+    #nameOverlay.show { display: flex; }
+    #nameBox {
+      background: linear-gradient(135deg, #2d1b69, #4c1d95);
+      border: 2px solid #a855f7;
+      border-radius: 20px; padding: 28px 22px;
+      text-align: center; color: white; width: 270px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    #nameTitle { font-size: 22px; font-weight: bold; margin-bottom: 6px; }
+    #nameScoreDisp {
+      font-size: 30px; font-weight: bold;
+      color: #ffe090; margin-bottom: 18px;
+    }
+    #nameInput {
+      width: 100%; padding: 11px 14px; border-radius: 10px;
+      border: 2px solid #a855f7; background: rgba(255,255,255,0.1);
+      color: white; font-size: 20px; text-align: center;
+      margin-bottom: 16px; outline: none; box-sizing: border-box;
+    }
+    #nameInput::placeholder { color: rgba(255,255,255,0.35); }
+    #nameBtns { display: flex; gap: 10px; justify-content: center; }
+    #nameSubmit {
+      background: linear-gradient(135deg, #a855f7, #ec4899);
+      color: white; border: none; border-radius: 24px;
+      padding: 11px 24px; font-size: 16px; font-weight: bold; cursor: pointer;
+    }
+    #nameSkip {
+      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.65);
+      border: none; border-radius: 24px;
+      padding: 11px 18px; font-size: 14px; cursor: pointer;
+    }
+    #nameStatus { margin-top: 12px; font-size: 13px; color: rgba(255,255,255,0.6); }
   </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<div id="gameWrap">
+  <canvas id="c"></canvas>
+  <div id="nameOverlay">
+    <div id="nameBox">
+      <div id="nameTitle">🎉 スコア登録</div>
+      <div id="nameScoreDisp"></div>
+      <input id="nameInput" type="text" maxlength="10" placeholder="なまえ（10文字まで）" autocomplete="off">
+      <div id="nameBtns">
+        <button id="nameSubmit">けってい！</button>
+        <button id="nameSkip">スキップ</button>
+      </div>
+      <div id="nameStatus"></div>
+    </div>
+  </div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 'use strict';
 const { Engine, World, Bodies, Body, Events, Runner } = Matter;
@@ -389,6 +444,66 @@ class Sound {
 }
 const snd = new Sound();
 
+// ── Supabase ──────────────────────────────────────────────
+const sb = supabase.createClient(
+  'https://mfazjpmpegbnkrxqlsha.supabase.co',
+  'sb_publishable_PHhwTlbnxLI9-WAffqbmaQ_nboWZU5s'
+);
+let leaderboard   = [];
+let showRanking   = false;
+
+async function fetchRanking() {
+  const { data } = await sb.from('scores')
+    .select('name, score')
+    .order('score', { ascending: false })
+    .limit(10);
+  if (data) leaderboard = data;
+}
+
+async function submitScore(name, scoreVal) {
+  const { error } = await sb.from('scores').insert({ name: name.trim(), score: scoreVal });
+  return !error;
+}
+
+// ── 名前入力UI ────────────────────────────────────────────
+const nameOverlay = document.getElementById('nameOverlay');
+const nameInput   = document.getElementById('nameInput');
+const nameStatus  = document.getElementById('nameStatus');
+
+function showNameOverlay() {
+  document.getElementById('nameScoreDisp').textContent =
+    `スコア: ${score.toLocaleString()}`;
+  nameInput.value = '';
+  nameStatus.textContent = '';
+  nameOverlay.classList.add('show');
+  setTimeout(() => nameInput.focus(), 100);
+}
+function hideNameOverlay() {
+  nameOverlay.classList.remove('show');
+}
+
+document.getElementById('nameSubmit').addEventListener('click', async () => {
+  const name = nameInput.value.trim();
+  if (!name) { nameStatus.textContent = 'なまえを入れてください！'; return; }
+  nameStatus.textContent = '送信中…';
+  document.getElementById('nameSubmit').disabled = true;
+  const ok = await submitScore(name, score);
+  hideNameOverlay();
+  await fetchRanking();
+  showRanking = true;
+  document.getElementById('nameSubmit').disabled = false;
+});
+
+document.getElementById('nameSkip').addEventListener('click', async () => {
+  hideNameOverlay();
+  await fetchRanking();
+  showRanking = true;
+});
+
+nameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('nameSubmit').click();
+});
+
 // ── Body creation ─────────────────────────────────────────
 function mkAnimal(x, y, type) {
   const b = Bodies.circle(x, y, A[type].r, {
@@ -510,7 +625,12 @@ canvas.addEventListener('touchend', e => {
 canvas.addEventListener('touchcancel', e => { touching = false; }, { passive: false });
 
 function handleOverClick(cx, cy) {
-  if (cx > W/2-90 && cx < W/2+90 && cy > H/2+65 && cy < H/2+115) restart();
+  if (showRanking) {
+    // ランキング画面のボタン位置
+    if (cx > W/2-90 && cx < W/2+90 && cy > H-75 && cy < H-25) restart();
+  } else {
+    if (cx > W/2-90 && cx < W/2+90 && cy > H/2+65 && cy < H/2+115) restart();
+  }
 }
 function handleUIClick(cx, cy) {
   if (cx > 10  && cx < 46  && cy > 74 && cy < 98) { snd.toggleMute(); return true; }
@@ -533,6 +653,8 @@ function restart() {
   [...world.bodies].filter(b => b.label === 'animal').forEach(b => World.remove(world, b));
   parts = []; flashList = [];
   score = 0; over = false; dropping = false; overTimer = 0;
+  showRanking = false; leaderboard = [];
+  hideNameOverlay();
   cur = rnd3(); nxt = rnd3();
   if (paused) { paused = false; Runner.run(runner, engine); }
   snd.restart();
@@ -548,7 +670,10 @@ function checkOver(dt) {
   );
   if (danger.length > 0) {
     overTimer += dt;
-    if (overTimer > 2000) { over = true; snd.gameOver(); }
+    if (overTimer > 2000) {
+      over = true; snd.gameOver();
+      setTimeout(() => showNameOverlay(), 1200);
+    }
   } else {
     overTimer = Math.max(0, overTimer - dt * 2);
   }
@@ -839,39 +964,95 @@ function draw() {
       return;
     }
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
+    ctx.fillStyle = 'rgba(0,0,0,0.82)';
     ctx.fillRect(0, 0, W, H);
 
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 42px sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('ゲームオーバー！', W/2, H/2 - 90);
+    if (showRanking) {
+      // ── ランキング画面 ──
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
-    ctx.font = "56px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
-    ctx.fillText('😢', W/2, H/2 - 30);
+      // タイトル
+      ctx.fillStyle = '#ffe090';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText('🏆 ランキング TOP10', W/2, 55);
 
-    ctx.fillStyle = '#ffe090';
-    ctx.font = 'bold 32px sans-serif';
-    ctx.fillText(`スコア: ${score.toLocaleString()}`, W/2, H/2 + 35);
-    ctx.fillStyle = '#aaa';
-    ctx.font = '20px sans-serif';
-    ctx.fillText(`さいこうきろく: ${hi.toLocaleString()}`, W/2, H/2 + 70);
+      // 自分のスコア
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.font = '15px sans-serif';
+      ctx.fillText(`あなたのスコア: ${score.toLocaleString()}`, W/2, 85);
 
-    const bx = W/2 - 90, by = H/2 + 90;
-    const rbg = ctx.createLinearGradient(bx, 0, bx+180, 0);
-    rbg.addColorStop(0, '#ff6b9d'); rbg.addColorStop(1, '#ff9b6b');
-    ctx.fillStyle = rbg;
-    rrect(bx, by, 180, 52, 26); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 22px sans-serif'; ctx.textBaseline = 'middle';
-    ctx.fillText('もう一度あそぶ！', W/2, by + 26);
+      // ランキングリスト
+      const medals = ['🥇','🥈','🥉'];
+      leaderboard.forEach((entry, i) => {
+        const y = 118 + i * 48;
+        const isMe = entry.score === score && i < 3;
 
-    // Scores summary
-    if (score > 0) {
-      const maxPts = A.reduce((s,a) => s+a.pts, 0) * 3;
-      const stars = score >= maxPts * 0.7 ? 3 : score >= maxPts * 0.35 ? 2 : 1;
-      ctx.font = '36px sans-serif';
-      ctx.fillText('⭐'.repeat(stars), W/2, H/2 - 145);
+        // 行背景
+        if (isMe) {
+          ctx.fillStyle = 'rgba(255,200,50,0.18)';
+          rrect(LX + 4, y - 18, GW - 8, 36, 8); ctx.fill();
+        }
+
+        // 順位
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.font = i < 3 ? "22px 'Apple Color Emoji','Segoe UI Emoji',sans-serif" : 'bold 16px sans-serif';
+        ctx.fillStyle = i < 3 ? '#fff' : 'rgba(255,255,255,0.7)';
+        ctx.fillText(i < 3 ? medals[i] : `${i+1}.`, LX + 14, y);
+
+        // 名前
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillStyle = isMe ? '#ffe090' : '#fff';
+        ctx.fillText(entry.name, LX + 52, y);
+
+        // スコア
+        ctx.textAlign = 'right';
+        ctx.fillStyle = isMe ? '#ffe090' : 'rgba(255,255,255,0.85)';
+        ctx.fillText(entry.score.toLocaleString(), RX - 10, y);
+      });
+
+      if (leaderboard.length === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('データ取得中…', W/2, H/2);
+      }
+
+      // リスタートボタン
+      const bx2 = W/2 - 90, by2 = H - 75;
+      const rbg2 = ctx.createLinearGradient(bx2, 0, bx2+180, 0);
+      rbg2.addColorStop(0, '#ff6b9d'); rbg2.addColorStop(1, '#ff9b6b');
+      ctx.fillStyle = rbg2;
+      rrect(bx2, by2, 180, 50, 25); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('もう一度あそぶ！', W/2, by2 + 25);
+
+    } else {
+      // ── 通常ゲームオーバー画面 ──
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 42px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('ゲームオーバー！', W/2, H/2 - 90);
+
+      ctx.font = "56px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+      ctx.fillText('😢', W/2, H/2 - 30);
+
+      ctx.fillStyle = '#ffe090';
+      ctx.font = 'bold 32px sans-serif';
+      ctx.fillText(`スコア: ${score.toLocaleString()}`, W/2, H/2 + 35);
+      ctx.fillStyle = '#aaa';
+      ctx.font = '20px sans-serif';
+      ctx.fillText(`さいこうきろく: ${hi.toLocaleString()}`, W/2, H/2 + 70);
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('名前入力画面が出ます…', W/2, H/2 + 108);
+
+      if (score > 0) {
+        const maxPts = A.reduce((s,a) => s+a.pts, 0) * 3;
+        const stars = score >= maxPts * 0.7 ? 3 : score >= maxPts * 0.35 ? 2 : 1;
+        ctx.font = '36px sans-serif';
+        ctx.fillText('⭐'.repeat(stars), W/2, H/2 - 145);
+      }
     }
     return;
   }
