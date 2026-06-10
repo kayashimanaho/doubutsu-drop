@@ -86,9 +86,10 @@ World.add(world, [
 let score = 0;
 let hi    = +localStorage.getItem('doub_hi') || 0;
 let over  = false;
-let started   = false;  // タップtoスタート
+let started   = false;
+let paused    = false;
 let dropping  = false;
-let touching  = false;  // スマホ：押している間true
+let touching  = false;
 let mx    = W / 2;
 let cur   = rnd3(), nxt = rnd3();
 let parts = [];
@@ -225,6 +226,16 @@ class Sound {
     if (this.muted) { this.bgmOn = false; clearTimeout(this.bgmTid); }
     else            { this.bgmOn = true;  this._bgm(); }
     return this.muted;
+  }
+
+  pause() {
+    if (this.ac) this.ac.suspend();
+    this.bgmOn = false; clearTimeout(this.bgmTid);
+  }
+
+  resume() {
+    if (this.ac) this.ac.resume();
+    if (!this.muted) { this.bgmOn = true; this._bgm(); }
   }
 
   // ── BGM: catchy chiptune ─────────────────────────────────
@@ -493,7 +504,7 @@ canvas.addEventListener('touchend', e => {
   e.preventDefault();
   if (!touching) return;
   touching = false;
-  if (!dropping) drop();
+  if (!dropping && !paused) drop();
 }, { passive: false });
 
 canvas.addEventListener('touchcancel', e => { touching = false; }, { passive: false });
@@ -502,8 +513,11 @@ function handleOverClick(cx, cy) {
   if (cx > W/2-90 && cx < W/2+90 && cy > H/2+65 && cy < H/2+115) restart();
 }
 function handleUIClick(cx, cy) {
-  if (cx > 10 && cx < 46 && cy > 74 && cy < 98) { snd.toggleMute(); return true; }
+  if (cx > 10  && cx < 46  && cy > 74 && cy < 98) { snd.toggleMute(); return true; }
+  if (cx > 52  && cx < 88  && cy > 74 && cy < 98) { togglePause(); return true; }
   if (cx > W-50 && cy < 50) { showEvolution = !showEvolution; return true; }
+  // ポーズ中は画面タップで再開
+  if (paused) { togglePause(); return true; }
   return false;
 }
 
@@ -520,6 +534,7 @@ function restart() {
   parts = []; flashList = [];
   score = 0; over = false; dropping = false; overTimer = 0;
   cur = rnd3(); nxt = rnd3();
+  if (paused) { paused = false; Runner.run(runner, engine); }
   snd.restart();
 }
 
@@ -750,8 +765,16 @@ function draw() {
   ctx.fillStyle = snd.muted ? 'rgba(255,80,80,0.4)' : 'rgba(255,255,255,0.18)';
   rrect(10, 74, 36, 24, 7); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.font = '15px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = "16px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(snd.muted ? '🔇' : '🔊', 28, 86);
+
+  // Pause button
+  ctx.fillStyle = paused ? 'rgba(255,200,50,0.45)' : 'rgba(255,255,255,0.18)';
+  rrect(52, 74, 36, 24, 7); ctx.fill();
+  ctx.fillStyle = paused ? '#ffe066' : 'rgba(255,255,255,0.85)';
+  ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(paused ? '▶' : '⏸', 70, 86);
 
   // Evolution hint button
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
@@ -799,6 +822,23 @@ function draw() {
 
   // ── Game over overlay ──
   if (over) {
+    // ── ポーズ中オーバーレイ ──
+    if (paused) {
+      ctx.fillStyle = 'rgba(10, 5, 30, 0.72)';
+      ctx.fillRect(0, UI, W, H - UI);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      // 大きな⏸アイコン
+      ctx.font = "80px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+      ctx.fillText('⏸', W/2, H/2 - 40);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText('一時停止中', W/2, H/2 + 30);
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = '16px sans-serif';
+      ctx.fillText('タップして再開', W/2, H/2 + 68);
+      return;
+    }
+
     ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
     ctx.fillRect(0, 0, W, H);
 
@@ -890,16 +930,31 @@ function drawStar(x, y, r1, r2, n) {
 }
 
 // ── Game loop ─────────────────────────────────────────────
-Runner.run(Runner.create(), engine);
+const runner = Runner.create();
+Runner.run(runner, engine);
+
+function togglePause() {
+  if (over || !started) return;
+  paused = !paused;
+  if (paused) {
+    Runner.stop(runner);
+    snd.pause();
+    touching = false;
+  } else {
+    Runner.run(runner, engine);
+    snd.resume();
+  }
+}
 
 let lastT = performance.now();
 function loop(now) {
   const dt = now - lastT; lastT = now;
 
-  if (!over && !showEvolution && started) checkOver(dt);
-  // 安全網：床をすり抜けた物体を除去
-  for (const b of [...world.bodies]) {
-    if (b.label === 'animal' && b.position.y > H + 150) World.remove(world, b);
+  if (!over && !showEvolution && started && !paused) checkOver(dt);
+  if (!paused) {
+    for (const b of [...world.bodies]) {
+      if (b.label === 'animal' && b.position.y > H + 150) World.remove(world, b);
+    }
   }
 
   // Update particles
