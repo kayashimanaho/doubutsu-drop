@@ -151,6 +151,7 @@ let parts = [];
 let overTimer = 0;
 let flashList = [];
 let showEvolution = false;
+let autoSubmitMsg = '';
 
 function rnd3() { return Math.floor(Math.random() * 3); }
 
@@ -449,8 +450,9 @@ const sb = supabase.createClient(
   'https://mfazjpmpegbnkrxqlsha.supabase.co',
   'sb_publishable_PHhwTlbnxLI9-WAffqbmaQ_nboWZU5s'
 );
-let leaderboard   = [];
-let showRanking   = false;
+let leaderboard       = [];
+let showRanking       = false;
+let showRankingOverlay = false;
 
 async function fetchRanking() {
   const { data } = await sb.from('scores')
@@ -460,9 +462,20 @@ async function fetchRanking() {
   if (data) leaderboard = data;
 }
 
+async function toggleRankingOverlay() {
+  if (showRankingOverlay) { showRankingOverlay = false; return; }
+  showRankingOverlay = true;
+  if (leaderboard.length === 0) await fetchRanking();
+}
+
 async function submitScore(name, scoreVal) {
-  const { error } = await sb.from('scores').insert({ name: name.trim(), score: scoreVal });
-  return !error;
+  const nm = name.trim();
+  const { data: existing } = await sb.from('scores')
+    .select('score').eq('name', nm).maybeSingle();
+  const { error } = await sb.rpc('upsert_score', { p_name: nm, p_score: scoreVal });
+  if (error) return { ok: false };
+  const isNewRecord = !existing || scoreVal > existing.score;
+  return { ok: true, isNewRecord, prevScore: existing?.score };
 }
 
 // ── 名前入力UI ────────────────────────────────────────────
@@ -473,7 +486,7 @@ const nameStatus  = document.getElementById('nameStatus');
 function showNameOverlay() {
   document.getElementById('nameScoreDisp').textContent =
     `スコア: ${score.toLocaleString()}`;
-  nameInput.value = '';
+  nameInput.value = localStorage.getItem('doub_name') || '';
   nameStatus.textContent = '';
   nameOverlay.classList.add('show');
   setTimeout(() => nameInput.focus(), 100);
@@ -487,7 +500,14 @@ document.getElementById('nameSubmit').addEventListener('click', async () => {
   if (!name) { nameStatus.textContent = 'なまえを入れてください！'; return; }
   nameStatus.textContent = '送信中…';
   document.getElementById('nameSubmit').disabled = true;
-  const ok = await submitScore(name, score);
+  const result = await submitScore(name, score);
+  if (!result.ok) {
+    nameStatus.textContent = '送信に失敗しました。もう一度お試しください。';
+    document.getElementById('nameSubmit').disabled = false;
+    return;
+  }
+  localStorage.setItem('doub_name', name);
+  autoSubmitMsg = result.isNewRecord ? '🎉 新記録更新！' : `最高: ${(result.prevScore || score).toLocaleString()}点`;
   hideNameOverlay();
   await fetchRanking();
   showRanking = true;
@@ -591,6 +611,7 @@ canvas.addEventListener('click', e => {
   if (!started) { started = true; return; }
   if (over)         { handleOverClick(cx, cy); return; }
   if (showEvolution){ showEvolution = false; return; }
+  if (showRankingOverlay && !(cx > W-96 && cx < W-50 && cy < 32)) { showRankingOverlay = false; return; }
   if (handleUIClick(cx, cy)) return;
   if (!dropping) drop();
 });
@@ -604,6 +625,7 @@ canvas.addEventListener('touchstart', e => {
   if (!started) { started = true; return; }
   if (over)          { handleOverClick(cx, cy); return; }
   if (showEvolution) { showEvolution = false; return; }
+  if (showRankingOverlay && !(cx > W-96 && cx < W-50 && cy < 32)) { showRankingOverlay = false; return; }
   if (handleUIClick(cx, cy)) return;
   touching = true;
   mx = cx;
@@ -626,8 +648,12 @@ canvas.addEventListener('touchcancel', e => { touching = false; }, { passive: fa
 
 function handleOverClick(cx, cy) {
   if (showRanking) {
-    // ランキング画面のボタン位置
-    if (cx > W/2-90 && cx < W/2+90 && cy > H-75 && cy < H-25) restart();
+    if (cx > W/2-90 && cx < W/2+90 && cy > H-70 && cy < H-22) { restart(); return; }
+    if (cx > W/2-65 && cx < W/2+65 && cy > H-102 && cy < H-76) {
+      localStorage.removeItem('doub_name');
+      showRanking = false;
+      showNameOverlay();
+    }
   } else {
     if (cx > W/2-90 && cx < W/2+90 && cy > H/2+65 && cy < H/2+115) restart();
   }
@@ -635,7 +661,8 @@ function handleOverClick(cx, cy) {
 function handleUIClick(cx, cy) {
   if (cx > 10  && cx < 46  && cy > 74 && cy < 98) { snd.toggleMute(); return true; }
   if (cx > 52  && cx < 88  && cy > 74 && cy < 98) { togglePause(); return true; }
-  if (cx > W-50 && cy < 50) { showEvolution = !showEvolution; return true; }
+  if (cx > W-50 && cy < 32) { showEvolution = !showEvolution; showRankingOverlay = false; return true; }
+  if (cx > W-96 && cx < W-50 && cy < 32) { toggleRankingOverlay(); return true; }
   // ポーズ中は画面タップで再開
   if (paused) { togglePause(); return true; }
   return false;
@@ -653,7 +680,7 @@ function restart() {
   [...world.bodies].filter(b => b.label === 'animal').forEach(b => World.remove(world, b));
   parts = []; flashList = [];
   score = 0; over = false; dropping = false; overTimer = 0;
-  showRanking = false; leaderboard = [];
+  showRanking = false; showRankingOverlay = false; leaderboard = []; autoSubmitMsg = '';
   hideNameOverlay();
   cur = rnd3(); nxt = rnd3();
   if (paused) { paused = false; Runner.run(runner, engine); }
@@ -672,7 +699,17 @@ function checkOver(dt) {
     overTimer += dt;
     if (overTimer > 2000) {
       over = true; snd.gameOver();
-      setTimeout(() => showNameOverlay(), 1200);
+      setTimeout(async () => {
+        const savedName = localStorage.getItem('doub_name');
+        if (savedName) {
+          const result = await submitScore(savedName, score);
+          autoSubmitMsg = result.isNewRecord ? '🎉 新記録更新！' : `最高: ${(result.prevScore || score).toLocaleString()}点`;
+          await fetchRanking();
+          showRanking = true;
+        } else {
+          showNameOverlay();
+        }
+      }, 1200);
     }
   } else {
     overTimer = Math.max(0, overTimer - dt * 2);
@@ -901,6 +938,13 @@ function draw() {
   ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(paused ? '▶' : '⏸', 70, 86);
 
+  // Ranking button
+  ctx.fillStyle = showRankingOverlay ? 'rgba(255,220,50,0.35)' : 'rgba(255,255,255,0.18)';
+  rrect(W-92, 4, 40, 28, 8); ctx.fill();
+  ctx.fillStyle = showRankingOverlay ? '#ffe090' : 'rgba(255,255,255,0.7)';
+  ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('ランク', W-72, 18);
+
   // Evolution hint button
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
   rrect(W-46, 4, 38, 28, 8); ctx.fill();
@@ -945,6 +989,43 @@ function draw() {
     return;
   }
 
+  // ── ランキングオーバーレイ（いつでも表示可） ──
+  if (showRankingOverlay) {
+    ctx.fillStyle = 'rgba(20, 10, 50, 0.93)';
+    rrect(16, 46, W-32, H-60, 16); ctx.fill();
+    ctx.strokeStyle = 'rgba(180,100,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+
+    ctx.fillStyle = '#ffe090';
+    ctx.font = 'bold 21px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🏆 ランキング TOP10', W/2, 80);
+
+    const medals = ['🥇','🥈','🥉'];
+    if (leaderboard.length === 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '15px sans-serif';
+      ctx.fillText('データ取得中…', W/2, H/2);
+    } else {
+      leaderboard.forEach((entry, i) => {
+        const y = 116 + i * 48;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.font = i < 3 ? "20px 'Apple Color Emoji','Segoe UI Emoji',sans-serif" : 'bold 15px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillText(i < 3 ? medals[i] : `${i+1}.`, LX + 14, y);
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(entry.name, LX + 50, y);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffe090';
+        ctx.fillText(entry.score.toLocaleString(), RX - 10, y);
+      });
+    }
+
+    ctx.fillStyle = 'rgba(255,255,255,0.38)';
+    ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('タップでとじる', W/2, H - 26);
+    return;
+  }
+
   // ── Game over overlay ──
   if (over) {
     // ── ポーズ中オーバーレイ ──
@@ -976,16 +1057,22 @@ function draw() {
       ctx.font = 'bold 24px sans-serif';
       ctx.fillText('🏆 ランキング TOP10', W/2, 55);
 
-      // 自分のスコア
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      ctx.font = '15px sans-serif';
-      ctx.fillText(`あなたのスコア: ${score.toLocaleString()}`, W/2, 85);
+      // 名前 & 結果メッセージ
+      const myName = localStorage.getItem('doub_name') || '';
+      ctx.font = '14px sans-serif';
+      ctx.fillStyle = autoSubmitMsg.startsWith('🎉') ? '#ffe090' : 'rgba(255,255,255,0.65)';
+      ctx.fillText(myName ? `${myName}  ${autoSubmitMsg}` : autoSubmitMsg, W/2, 80);
+
+      // 今回のスコア
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = '14px sans-serif';
+      ctx.fillText(`今回: ${score.toLocaleString()}点`, W/2, 98);
 
       // ランキングリスト
       const medals = ['🥇','🥈','🥉'];
       leaderboard.forEach((entry, i) => {
-        const y = 118 + i * 48;
-        const isMe = entry.score === score && i < 3;
+        const y = 126 + i * 46;
+        const isMe = myName && entry.name === myName;
 
         // 行背景
         if (isMe) {
@@ -1016,16 +1103,24 @@ function draw() {
         ctx.fillText('データ取得中…', W/2, H/2);
       }
 
+      // なまえ変更ボタン
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      rrect(W/2-65, H-102, 130, 26, 13); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('✏️ なまえを変える', W/2, H-89);
+
       // リスタートボタン
-      const bx2 = W/2 - 90, by2 = H - 75;
+      const bx2 = W/2 - 90, by2 = H - 70;
       const rbg2 = ctx.createLinearGradient(bx2, 0, bx2+180, 0);
       rbg2.addColorStop(0, '#ff6b9d'); rbg2.addColorStop(1, '#ff9b6b');
       ctx.fillStyle = rbg2;
-      rrect(bx2, by2, 180, 50, 25); ctx.fill();
+      rrect(bx2, by2, 180, 48, 24); ctx.fill();
       ctx.fillStyle = '#fff';
-      ctx.font = 'bold 20px sans-serif';
+      ctx.font = 'bold 19px sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('もう一度あそぶ！', W/2, by2 + 25);
+      ctx.fillText('もう一度あそぶ！', W/2, by2 + 24);
 
     } else {
       // ── 通常ゲームオーバー画面 ──
