@@ -784,6 +784,9 @@ const sb = supabase.createClient(
   'sb_publishable_PHhwTlbnxLI9-WAffqbmaQ_nboWZU5s'
 );
 let leaderboard        = [];
+let dailyLeaderboard   = [];
+let recentActivity     = [];
+let rankingTab         = 'all'; // 'all' | 'daily' | 'recent'
 let showRanking        = false;
 let showRankingOverlay = false;
 
@@ -801,10 +804,42 @@ async function fetchRanking() {
   if (data) leaderboard = data;
 }
 
+async function fetchDailyRanking() {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const { data } = await sb.from('scores')
+    .select('name, score')
+    .gte('updated_at', today.toISOString())
+    .order('score', { ascending: false })
+    .limit(10);
+  if (data) dailyLeaderboard = data;
+}
+
+async function fetchRecentActivity() {
+  const { data } = await sb.from('scores')
+    .select('name, score, updated_at')
+    .order('updated_at', { ascending: false })
+    .limit(8);
+  if (data) recentActivity = data;
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'たった今';
+  if (mins < 60) return `${mins}分前`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}時間前`;
+  return `${Math.floor(hours / 24)}日前`;
+}
+
 async function toggleRankingOverlay() {
   if (showRankingOverlay) { showRankingOverlay = false; return; }
   showRankingOverlay = true;
-  if (leaderboard.length === 0) await fetchRanking();
+  await Promise.all([
+    leaderboard.length === 0 ? fetchRanking() : Promise.resolve(),
+    fetchDailyRanking(),
+    fetchRecentActivity(),
+  ]);
 }
 
 async function submitScore(name, scoreVal) {
@@ -862,14 +897,14 @@ document.getElementById('nameSubmit').addEventListener('click', async () => {
     autoSubmitMsg = result.isNewRecord ? '🎉 新記録更新！' : `最高: ${(result.prevScore || score).toLocaleString()}点`;
   }
   hideNameOverlay();
-  await fetchRanking();
+  await Promise.all([fetchRanking(), fetchDailyRanking(), fetchRecentActivity()]);
   showRanking = true;
   document.getElementById('nameSubmit').disabled = false;
 });
 
 document.getElementById('nameSkip').addEventListener('click', async () => {
   hideNameOverlay();
-  await fetchRanking();
+  await Promise.all([fetchRanking(), fetchDailyRanking(), fetchRecentActivity()]);
   showRanking = true;
 });
 
@@ -982,7 +1017,16 @@ canvas.addEventListener('click', e => {
   if (!started) { started = true; return; }
   if (over)         { handleOverClick(cx, cy); return; }
   if (showEvolution){ showEvolution = false; return; }
-  if (showRankingOverlay && !(cx > 196 && cx < 290 && cy > 75 && cy < 102)) { showRankingOverlay = false; return; }
+  if (showRankingOverlay) {
+    const tabs = ['all','daily','recent'];
+    let tapped = false;
+    tabs.forEach((key, i) => {
+      const tx = LX + 10 + i * (GW / 3), tw = GW / 3 - 6;
+      if (cx >= tx && cx <= tx + tw && cy >= 88 && cy <= 114) { rankingTab = key; tapped = true; }
+    });
+    if (!tapped) showRankingOverlay = false;
+    return;
+  }
   if (handleUIClick(cx, cy)) return;
   if (!dropping) drop();
 });
@@ -996,7 +1040,16 @@ canvas.addEventListener('touchstart', e => {
   if (!started) { started = true; return; }
   if (over)          { handleOverClick(cx, cy); return; }
   if (showEvolution) { showEvolution = false; return; }
-  if (showRankingOverlay && !(cx > 196 && cx < 290 && cy > 75 && cy < 102)) { showRankingOverlay = false; return; }
+  if (showRankingOverlay) {
+    const tabs = ['all','daily','recent'];
+    let tapped = false;
+    tabs.forEach((key, i) => {
+      const tx = LX + 10 + i * (GW / 3), tw = GW / 3 - 6;
+      if (cx >= tx && cx <= tx + tw && cy >= 88 && cy <= 114) { rankingTab = key; tapped = true; }
+    });
+    if (!tapped) showRankingOverlay = false;
+    return;
+  }
   if (handleUIClick(cx, cy)) return;
   touching = true;
   mx = cx;
@@ -1019,6 +1072,14 @@ canvas.addEventListener('touchcancel', e => { touching = false; }, { passive: fa
 
 function handleOverClick(cx, cy) {
   if (showRanking) {
+    // タブタップ
+    const tabKeys = ['all','daily','recent'];
+    let tappedTab = false;
+    tabKeys.forEach((key, i) => {
+      const tx = LX + 10 + i * (GW / 3), tw = GW / 3 - 6;
+      if (cx >= tx && cx <= tx + tw && cy >= 64 && cy <= 90) { rankingTab = key; tappedTab = true; }
+    });
+    if (tappedTab) return;
     if (cx > W/2-90 && cx < W/2+90 && cy > H-70 && cy < H-22) { restart(); return; }
     if (cx > W/2-65 && cx < W/2+65 && cy > H-102 && cy < H-76) {
       pendingRename = localStorage.getItem('doub_name');
@@ -1369,28 +1430,57 @@ function draw() {
     ctx.strokeStyle = 'rgba(180,100,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
 
     ctx.fillStyle = '#ffe090';
-    ctx.font = 'bold 21px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('🏆 ランキング TOP10', W/2, 80);
+    ctx.font = 'bold 19px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🏆 ランキング', W/2, 72);
+
+    // タブ
+    const tabs = [['all','全期間'],['daily','今日'],['recent','最近']];
+    tabs.forEach(([key, label], i) => {
+      const tx = LX + 10 + i * (GW / 3), tw = GW / 3 - 6;
+      const active = rankingTab === key;
+      ctx.fillStyle = active ? 'rgba(168,85,247,0.7)' : 'rgba(255,255,255,0.1)';
+      rrect(tx, 88, tw, 26, 8); ctx.fill();
+      ctx.fillStyle = active ? '#fff' : 'rgba(255,255,255,0.5)';
+      ctx.font = `${active ? 'bold ' : ''}12px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, tx + tw / 2, 101);
+    });
 
     const medals = ['🥇','🥈','🥉'];
-    if (leaderboard.length === 0) {
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.font = '15px sans-serif';
-      ctx.fillText('データ取得中…', W/2, H/2);
+    if (rankingTab === 'recent') {
+      if (recentActivity.length === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('データ取得中…', W/2, H/2);
+      } else {
+        recentActivity.forEach((entry, i) => {
+          const y = 136 + i * 46;
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '11px sans-serif';
+          ctx.fillText(timeAgo(entry.updated_at), LX + 14, y - 9);
+          ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
+          ctx.fillText(entry.name, LX + 14, y + 8);
+          ctx.textAlign = 'right'; ctx.fillStyle = '#ffe090'; ctx.font = '13px sans-serif';
+          ctx.fillText(`${entry.score.toLocaleString()}点`, RX - 10, y + 8);
+        });
+      }
     } else {
-      leaderboard.forEach((entry, i) => {
-        const y = 116 + i * 48;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.font = i < 3 ? "20px 'Apple Color Emoji','Segoe UI Emoji',sans-serif" : 'bold 15px sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillText(i < 3 ? medals[i] : `${i+1}.`, LX + 14, y);
-        ctx.font = 'bold 15px sans-serif';
-        ctx.fillStyle = '#fff';
-        ctx.fillText(entry.name, LX + 50, y);
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#ffe090';
-        ctx.fillText(entry.score.toLocaleString(), RX - 10, y);
-      });
+      const list = rankingTab === 'daily' ? dailyLeaderboard : leaderboard;
+      if (list.length === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(rankingTab === 'daily' ? '今日の記録はまだありません' : 'データ取得中…', W/2, H/2);
+      } else {
+        list.forEach((entry, i) => {
+          const y = 136 + i * 46;
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.font = i < 3 ? "18px 'Apple Color Emoji','Segoe UI Emoji',sans-serif" : 'bold 14px sans-serif';
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.fillText(i < 3 ? medals[i] : `${i+1}.`, LX + 14, y);
+          ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = '#fff';
+          ctx.fillText(entry.name, LX + 48, y);
+          ctx.textAlign = 'right'; ctx.fillStyle = '#ffe090';
+          ctx.fillText(entry.score.toLocaleString(), RX - 10, y);
+        });
+      }
     }
 
     ctx.fillStyle = 'rgba(255,255,255,0.38)';
@@ -1427,53 +1517,72 @@ function draw() {
 
       // タイトル
       ctx.fillStyle = '#ffe090';
-      ctx.font = 'bold 24px sans-serif';
-      ctx.fillText('🏆 ランキング TOP10', W/2, 55);
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText('🏆 ランキング', W/2, 50);
+
+      // タブ
+      const tabs2 = [['all','全期間'],['daily','今日'],['recent','最近']];
+      tabs2.forEach(([key, label], i) => {
+        const tx = LX + 10 + i * (GW / 3), tw = GW / 3 - 6;
+        const active = rankingTab === key;
+        ctx.fillStyle = active ? 'rgba(168,85,247,0.7)' : 'rgba(255,255,255,0.1)';
+        rrect(tx, 64, tw, 26, 8); ctx.fill();
+        ctx.fillStyle = active ? '#fff' : 'rgba(255,255,255,0.5)';
+        ctx.font = `${active ? 'bold ' : ''}12px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(label, tx + tw / 2, 77);
+      });
 
       // 名前 & 結果メッセージ
       const myName = localStorage.getItem('doub_name') || '';
-      ctx.font = '14px sans-serif';
+      ctx.font = '13px sans-serif';
       ctx.fillStyle = autoSubmitMsg.startsWith('🎉') ? '#ffe090' : 'rgba(255,255,255,0.65)';
-      ctx.fillText(myName ? `${myName}  ${autoSubmitMsg}` : autoSubmitMsg, W/2, 80);
-
-      // 今回のスコア
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.font = '14px sans-serif';
-      ctx.fillText(`今回: ${score.toLocaleString()}点`, W/2, 98);
+      ctx.fillText(myName ? `${myName}  ${autoSubmitMsg}` : autoSubmitMsg, W/2, 96);
+      ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '12px sans-serif';
+      ctx.fillText(`今回: ${score.toLocaleString()}点`, W/2, 112);
 
       // ランキングリスト
       const medals = ['🥇','🥈','🥉'];
-      leaderboard.forEach((entry, i) => {
-        const y = 126 + i * 46;
-        const isMe = myName && entry.name === myName;
+      const listOver = rankingTab === 'daily' ? dailyLeaderboard : rankingTab === 'recent' ? recentActivity : leaderboard;
 
-        // 行背景
-        if (isMe) {
-          ctx.fillStyle = 'rgba(255,200,50,0.18)';
-          rrect(LX + 4, y - 18, GW - 8, 36, 8); ctx.fill();
+      if (rankingTab === 'recent') {
+        if (recentActivity.length === 0) {
+          ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText('データ取得中…', W/2, H/2);
+        } else {
+          recentActivity.forEach((entry, i) => {
+            const y = 134 + i * 44;
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '11px sans-serif';
+            ctx.fillText(timeAgo(entry.updated_at), LX + 14, y - 8);
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
+            ctx.fillText(entry.name, LX + 14, y + 8);
+            ctx.textAlign = 'right'; ctx.fillStyle = '#ffe090'; ctx.font = '13px sans-serif';
+            ctx.fillText(`${entry.score.toLocaleString()}点`, RX - 10, y + 8);
+          });
         }
-
-        // 順位
-        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.font = i < 3 ? "22px 'Apple Color Emoji','Segoe UI Emoji',sans-serif" : 'bold 16px sans-serif';
-        ctx.fillStyle = i < 3 ? '#fff' : 'rgba(255,255,255,0.7)';
-        ctx.fillText(i < 3 ? medals[i] : `${i+1}.`, LX + 14, y);
-
-        // 名前
-        ctx.font = 'bold 16px sans-serif';
-        ctx.fillStyle = isMe ? '#ffe090' : '#fff';
-        ctx.fillText(entry.name, LX + 52, y);
-
-        // スコア
-        ctx.textAlign = 'right';
-        ctx.fillStyle = isMe ? '#ffe090' : 'rgba(255,255,255,0.85)';
-        ctx.fillText(entry.score.toLocaleString(), RX - 10, y);
-      });
-
-      if (leaderboard.length === 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('データ取得中…', W/2, H/2);
+      } else {
+        if (listOver.length === 0) {
+          ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText(rankingTab === 'daily' ? '今日の記録はまだありません' : 'データ取得中…', W/2, H/2);
+        } else {
+          listOver.forEach((entry, i) => {
+            const y = 134 + i * 44;
+            const isMe = myName && entry.name === myName;
+            if (isMe) {
+              ctx.fillStyle = 'rgba(255,200,50,0.18)';
+              rrect(LX + 4, y - 16, GW - 8, 32, 8); ctx.fill();
+            }
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.font = i < 3 ? "20px 'Apple Color Emoji','Segoe UI Emoji',sans-serif" : 'bold 14px sans-serif';
+            ctx.fillStyle = i < 3 ? '#fff' : 'rgba(255,255,255,0.7)';
+            ctx.fillText(i < 3 ? medals[i] : `${i+1}.`, LX + 14, y);
+            ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = isMe ? '#ffe090' : '#fff';
+            ctx.fillText(entry.name, LX + 48, y);
+            ctx.textAlign = 'right'; ctx.fillStyle = isMe ? '#ffe090' : 'rgba(255,255,255,0.85)';
+            ctx.fillText(entry.score.toLocaleString(), RX - 10, y);
+          });
+        }
       }
 
       // なまえ変更ボタン
