@@ -1021,7 +1021,7 @@ canvas.addEventListener('click', e => {
     const tabs = ['all','daily','recent'];
     let tapped = false;
     tabs.forEach((key, i) => {
-      const tx = LX + 10 + i * (GW / 3), tw = GW / 3 - 6;
+      const tw = (W - 52) / 3 - 4, tx = 24 + i * ((W - 52) / 3);
       if (cx >= tx && cx <= tx + tw && cy >= 88 && cy <= 114) { rankingTab = key; tapped = true; }
     });
     if (!tapped) showRankingOverlay = false;
@@ -1044,7 +1044,7 @@ canvas.addEventListener('touchstart', e => {
     const tabs = ['all','daily','recent'];
     let tapped = false;
     tabs.forEach((key, i) => {
-      const tx = LX + 10 + i * (GW / 3), tw = GW / 3 - 6;
+      const tw = (W - 52) / 3 - 4, tx = 24 + i * ((W - 52) / 3);
       if (cx >= tx && cx <= tx + tw && cy >= 88 && cy <= 114) { rankingTab = key; tapped = true; }
     });
     if (!tapped) showRankingOverlay = false;
@@ -1076,7 +1076,7 @@ function handleOverClick(cx, cy) {
     const tabKeys = ['all','daily','recent'];
     let tappedTab = false;
     tabKeys.forEach((key, i) => {
-      const tx = LX + 10 + i * (GW / 3), tw = GW / 3 - 6;
+      const tw = (W - 52) / 3 - 4, tx = 24 + i * ((W - 52) / 3);
       if (cx >= tx && cx <= tx + tw && cy >= 64 && cy <= 90) { rankingTab = key; tappedTab = true; }
     });
     if (tappedTab) return;
@@ -1436,7 +1436,7 @@ function draw() {
     // タブ
     const tabs = [['all','全期間'],['daily','今日'],['recent','最近']];
     tabs.forEach(([key, label], i) => {
-      const tx = LX + 10 + i * (GW / 3), tw = GW / 3 - 6;
+      const tw = (W - 52) / 3 - 4, tx = 24 + i * ((W - 52) / 3);
       const active = rankingTab === key;
       ctx.fillStyle = active ? 'rgba(168,85,247,0.7)' : 'rgba(255,255,255,0.1)';
       rrect(tx, 88, tw, 26, 8); ctx.fill();
@@ -1523,7 +1523,7 @@ function draw() {
       // タブ
       const tabs2 = [['all','全期間'],['daily','今日'],['recent','最近']];
       tabs2.forEach(([key, label], i) => {
-        const tx = LX + 10 + i * (GW / 3), tw = GW / 3 - 6;
+        const tw = (W - 52) / 3 - 4, tx = 24 + i * ((W - 52) / 3);
         const active = rankingTab === key;
         ctx.fillStyle = active ? 'rgba(168,85,247,0.7)' : 'rgba(255,255,255,0.1)';
         rrect(tx, 64, tw, 26, 8); ctx.fill();
