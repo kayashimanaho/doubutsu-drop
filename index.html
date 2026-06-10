@@ -20,7 +20,7 @@
     }
     canvas {
       display: block;
-      cursor: none;
+      cursor: default;
       border-radius: 18px;
       box-shadow: 0 0 60px rgba(180, 100, 255, 0.5), 0 20px 40px rgba(0,0,0,0.6);
     }
@@ -517,14 +517,45 @@ class Sound {
 
   _dragon() {
     if (!this.ac || this.muted) return;
-    // Rising fanfare: C E G C' E' G' C''
-    [[523,0],[659,0.1],[784,0.2],[1047,0.35],[1319,0.52],[1568,0.7],[2093,0.92]]
+    const t = this.ac.currentTime;
+
+    // 低音の唸り（ドラゴンの咆哮）
+    [55, 73.4, 110].forEach(f => {
+      this._note(f, t, 1.8, 'sawtooth', 0.35, 0.02);
+    });
+
+    // 轟音ノイズ
+    try {
+      const buf = this.ac.createBuffer(1, this.ac.sampleRate * 1.2, this.ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const src = this.ac.createBufferSource();
+      src.buffer = buf;
+      const lpf = this.ac.createBiquadFilter();
+      lpf.type = 'lowpass'; lpf.frequency.value = 300;
+      const g = this.ac.createGain(); g.gain.setValueAtTime(0.5, t);
+      src.connect(lpf); lpf.connect(g); g.connect(this.comp);
+      src.start(t);
+    } catch(e) {}
+
+    // 上昇するパワーコード
+    [[110,0.1],[131,0.25],[165,0.42],[220,0.62],[277,0.85]]
       .forEach(([f, d]) => setTimeout(() => {
         if (!this.ac || this.muted) return;
-        const t = this.ac.currentTime;
-        this._note(f,       t, 0.22, 'sine',     0.45, 0.005);
-        this._note(f * 1.5, t, 0.16, 'triangle', 0.18, 0.005);
+        const ct = this.ac.currentTime;
+        this._note(f,     ct, 0.4, 'sawtooth', 0.4,  0.01);
+        this._note(f * 2, ct, 0.3, 'square',   0.15, 0.01);
+        this._note(f * 3, ct, 0.2, 'sine',     0.10, 0.01);
       }, d * 1000));
+
+    // 最後に高音の咆哮
+    setTimeout(() => {
+      if (!this.ac || this.muted) return;
+      const ct = this.ac.currentTime;
+      this._note(440, ct,        0.6, 'sawtooth', 0.5,  0.005);
+      this._note(880, ct + 0.05, 0.5, 'sawtooth', 0.3,  0.005);
+      this._note(220, ct,        0.8, 'square',   0.25, 0.01);
+    }, 1100);
   }
 
   gameOver() {
@@ -891,6 +922,15 @@ function toCanvas(clientX, clientY) {
   const rc = canvas.getBoundingClientRect();
   return [(clientX - rc.left) * (W / rc.width), (clientY - rc.top) * (H / rc.height)];
 }
+
+// ── デバッグ: Dキーで恐竜2体を生成 ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'd' || e.key === 'D') {
+    if (!started || over) return;
+    mkAnimal(W / 2 - 60, 100, A.length - 2);
+    mkAnimal(W / 2 + 60, 100, A.length - 2);
+  }
+});
 
 // ── マウス（デスクトップ）──
 canvas.addEventListener('mousemove', e => {
@@ -1475,13 +1515,12 @@ function draw() {
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 21px sans-serif';
     ctx.textBaseline = 'middle';
-    ctx.fillText('タップしてスタート！', W / 2, by + 29);
+    ctx.fillText('スタート！', W / 2, by + 29);
 
     // 操作説明（絵文字なし・短く）
     ctx.fillStyle = 'rgba(255,255,255,0.62)';
     ctx.font = '13px sans-serif';
-    ctx.fillText('スマホ: 押しながら動かして、はなして落とす', W / 2, 370);
-    ctx.fillText('PC: マウスで動かして クリックで落とす', W / 2, 394);
+    ctx.fillText('押しながら動かして、はなして落とす', W / 2, 382);
 
     ctx.restore();
   }
