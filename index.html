@@ -611,7 +611,7 @@ canvas.addEventListener('click', e => {
   if (!started) { started = true; return; }
   if (over)         { handleOverClick(cx, cy); return; }
   if (showEvolution){ showEvolution = false; return; }
-  if (showRankingOverlay && !(cx > W-96 && cx < W-50 && cy < 32)) { showRankingOverlay = false; return; }
+  if (showRankingOverlay && !(cx > 94 && cx < 144 && cy > 72 && cy < 100)) { showRankingOverlay = false; return; }
   if (handleUIClick(cx, cy)) return;
   if (!dropping) drop();
 });
@@ -625,7 +625,7 @@ canvas.addEventListener('touchstart', e => {
   if (!started) { started = true; return; }
   if (over)          { handleOverClick(cx, cy); return; }
   if (showEvolution) { showEvolution = false; return; }
-  if (showRankingOverlay && !(cx > W-96 && cx < W-50 && cy < 32)) { showRankingOverlay = false; return; }
+  if (showRankingOverlay && !(cx > 94 && cx < 144 && cy > 72 && cy < 100)) { showRankingOverlay = false; return; }
   if (handleUIClick(cx, cy)) return;
   touching = true;
   mx = cx;
@@ -661,8 +661,8 @@ function handleOverClick(cx, cy) {
 function handleUIClick(cx, cy) {
   if (cx > 10  && cx < 46  && cy > 74 && cy < 98) { snd.toggleMute(); return true; }
   if (cx > 52  && cx < 88  && cy > 74 && cy < 98) { togglePause(); return true; }
-  if (cx > W-50 && cy < 32) { showEvolution = !showEvolution; showRankingOverlay = false; return true; }
-  if (cx > W-96 && cx < W-50 && cy < 32) { toggleRankingOverlay(); return true; }
+  if (cx > 148 && cx < 188 && cy > 72 && cy < 100) { showEvolution = !showEvolution; showRankingOverlay = false; return true; }
+  if (cx > 94  && cx < 144 && cy > 72 && cy < 100) { toggleRankingOverlay(); return true; }
   // ポーズ中は画面タップで再開
   if (paused) { togglePause(); return true; }
   return false;
@@ -940,17 +940,17 @@ function draw() {
 
   // Ranking button
   ctx.fillStyle = showRankingOverlay ? 'rgba(255,220,50,0.35)' : 'rgba(255,255,255,0.18)';
-  rrect(W-92, 4, 40, 28, 8); ctx.fill();
+  rrect(96, 74, 46, 24, 7); ctx.fill();
   ctx.fillStyle = showRankingOverlay ? '#ffe090' : 'rgba(255,255,255,0.7)';
   ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('ランク', W-72, 18);
+  ctx.fillText('ランク', 119, 86);
 
   // Evolution hint button
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  rrect(W-46, 4, 38, 28, 8); ctx.fill();
+  rrect(148, 74, 38, 24, 7); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('図鑑', W-27, 18);
+  ctx.fillText('図鑑', 167, 86);
 
   // ── Evolution chart overlay ──
   if (showEvolution) {
