@@ -170,11 +170,13 @@ class Sound {
 
   boot() {
     if (this.ac) { if (this.ac.state === 'suspended') this.ac.resume(); return; }
-    this.ac   = new (window.AudioContext || window.webkitAudioContext)();
+    this.ac         = new (window.AudioContext || window.webkitAudioContext)();
+    this.masterGain = this.ac.createGain();
+    this.masterGain.connect(this.ac.destination);
     this.comp = this.ac.createDynamicsCompressor();
     this.comp.threshold.value = -18;
     this.comp.ratio.value     = 4;
-    this.comp.connect(this.ac.destination);
+    this.comp.connect(this.masterGain);
     this.bgmOn = true;
     this._bgm();
   }
@@ -279,6 +281,9 @@ class Sound {
 
   toggleMute() {
     this.muted = !this.muted;
+    if (this.masterGain) {
+      this.masterGain.gain.setValueAtTime(this.muted ? 0 : 1, this.ac.currentTime);
+    }
     if (this.muted) { this.bgmOn = false; clearTimeout(this.bgmTid); }
     else            { this.bgmOn = true;  this._bgm(); }
     return this.muted;
