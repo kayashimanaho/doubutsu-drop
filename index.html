@@ -558,6 +558,36 @@ class Sound {
     }, 1100);
   }
 
+  dragonClash() {
+    if (!this.ac || this.muted) return;
+    const t = this.ac.currentTime;
+    // 超低音の爆発
+    [27.5, 41.2, 55].forEach(f => {
+      this._note(f, t, 2.5, 'sawtooth', 0.5, 0.01);
+    });
+    // 轟音ノイズ
+    try {
+      const buf = this.ac.createBuffer(1, this.ac.sampleRate * 2, this.ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 0.5);
+      const src = this.ac.createBufferSource();
+      src.buffer = buf;
+      const lpf = this.ac.createBiquadFilter();
+      lpf.type = 'lowpass'; lpf.frequency.value = 200;
+      const g = this.ac.createGain(); g.gain.setValueAtTime(0.8, t);
+      src.connect(lpf); lpf.connect(g); g.connect(this.comp);
+      src.start(t);
+    } catch(e) {}
+    // 勝利ファンファーレ
+    [[220,0.3],[277,0.5],[330,0.7],[440,0.95],[554,1.2],[659,1.5],[880,1.85]]
+      .forEach(([f, d]) => setTimeout(() => {
+        if (!this.ac || this.muted) return;
+        const ct = this.ac.currentTime;
+        this._note(f,     ct, 0.5, 'sawtooth', 0.5,  0.008);
+        this._note(f * 2, ct, 0.4, 'sine',     0.25, 0.008);
+      }, d * 1000));
+  }
+
   gameOver() {
     if (!this.ac) return;
     this.bgmOn = false; clearTimeout(this.bgmTid);
@@ -867,9 +897,27 @@ Events.on(engine, 'collisionStart', e => {
   for (const { bodyA: a, bodyB: b } of e.pairs) {
     if (a.label !== 'animal' || b.label !== 'animal') continue;
     if (a.atype !== b.atype) continue;
-    if (a.atype >= A.length - 1) continue;
     if (a.merged || b.merged) continue;
     a.merged = b.merged = true;
+
+    // ドラゴン同士 → 全消し＋ボーナス
+    if (a.atype >= A.length - 1) {
+      const mx2 = (a.position.x + b.position.x) / 2;
+      const my2 = (a.position.y + b.position.y) / 2;
+      setTimeout(() => {
+        const animals = world.bodies.filter(bd => bd.label === 'animal');
+        animals.forEach(bd => {
+          burst(bd.position.x, bd.position.y, A[bd.atype].col, 16);
+          World.remove(world, bd);
+        });
+        const bonus = 300;
+        score += bonus;
+        if (score > hi) { hi = score; localStorage.setItem('doub_hi', hi); }
+        flashList.push({ x: mx2, y: H / 2, txt: `🐉 全消し！ +${bonus}`, life: 2.5, col: '#FF4060' });
+        snd.dragonClash();
+      }, 30);
+      continue;
+    }
 
     const nt = a.atype + 1;
     const mx2 = (a.position.x + b.position.x) / 2;
@@ -922,15 +970,6 @@ function toCanvas(clientX, clientY) {
   const rc = canvas.getBoundingClientRect();
   return [(clientX - rc.left) * (W / rc.width), (clientY - rc.top) * (H / rc.height)];
 }
-
-// ── デバッグ: Dキーで恐竜2体を生成 ──
-document.addEventListener('keydown', e => {
-  if (e.key === 'd' || e.key === 'D') {
-    if (!started || over) return;
-    mkAnimal(W / 2 - 60, 100, A.length - 2);
-    mkAnimal(W / 2 + 60, 100, A.length - 2);
-  }
-});
 
 // ── マウス（デスクトップ）──
 canvas.addEventListener('mousemove', e => {
