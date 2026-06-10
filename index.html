@@ -143,6 +143,32 @@
     .accordionBody h4 { color: #a78bfa; font-size: 12px; margin: 10px 0 4px; }
     .accordionBody h4:first-child { margin-top: 0; }
     .legalLink { color: #a78bfa; text-decoration: none; }
+    #nameSettingBox {
+      background: rgba(255,255,255,0.07); border-radius: 12px; padding: 12px 14px;
+    }
+    #nameSettingDisplay {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    #nameSettingCurrent { color: #fff; font-size: 15px; font-weight: bold; }
+    #nameSettingUnset { color: rgba(255,255,255,0.4); font-size: 13px; }
+    #nameSettingEditBtn {
+      background: rgba(168,85,247,0.3); border: 1px solid rgba(168,85,247,0.5);
+      color: #fff; border-radius: 8px; padding: 5px 12px; font-size: 12px; cursor: pointer;
+    }
+    #nameSettingForm { display: none; margin-top: 10px; }
+    #nameSettingInput {
+      width: 100%; padding: 9px 12px; border-radius: 8px;
+      border: 1px solid rgba(168,85,247,0.5); background: rgba(255,255,255,0.1);
+      color: #fff; font-size: 15px; text-align: center; outline: none;
+      box-sizing: border-box; margin-bottom: 8px;
+    }
+    #nameSettingInput::placeholder { color: rgba(255,255,255,0.3); }
+    #nameSettingSave {
+      width: 100%; padding: 9px; border-radius: 8px;
+      background: linear-gradient(135deg, #a855f7, #ec4899);
+      border: none; color: #fff; font-size: 14px; font-weight: bold; cursor: pointer;
+    }
+    #nameSettingMsg { font-size: 12px; color: #a78bfa; margin-top: 6px; text-align: center; }
   </style>
 </head>
 <body>
@@ -167,6 +193,20 @@
         <button id="menuClose">✕ とじる</button>
       </div>
       <div id="menuBody">
+        <div class="menuSection">
+          <div class="menuSectionTitle">👤 あなたのなまえ</div>
+          <div id="nameSettingBox">
+            <div id="nameSettingDisplay">
+              <span id="nameSettingCurrent"></span>
+              <button id="nameSettingEditBtn">✏️ 変更</button>
+            </div>
+            <div id="nameSettingForm">
+              <input id="nameSettingInput" type="text" maxlength="10" placeholder="なまえ（10文字まで）" autocomplete="off">
+              <button id="nameSettingSave">けってい！</button>
+              <div id="nameSettingMsg"></div>
+            </div>
+          </div>
+        </div>
         <div class="menuSection">
           <div class="menuSectionTitle">📢 お知らせ</div>
           <div id="newsList"></div>
@@ -266,7 +306,19 @@ const NEWS = [
   { date: '2026-06-10', text: 'どうぶつドロップをリリースしました！遊んでくれてありがとう🎉', isNew: true },
 ];
 
+function refreshNameSetting() {
+  const saved = localStorage.getItem('doub_name');
+  const el = document.getElementById('nameSettingCurrent');
+  el.innerHTML = saved
+    ? `<span style="font-size:11px;color:rgba(255,255,255,0.45)">登録名：</span>${saved}`
+    : '<span id="nameSettingUnset">未登録</span>';
+  document.getElementById('nameSettingForm').style.display = 'none';
+  document.getElementById('nameSettingMsg').textContent = '';
+  if (saved) document.getElementById('nameSettingInput').value = saved;
+}
+
 function openMenu() {
+  refreshNameSetting();
   const list = document.getElementById('newsList');
   list.innerHTML = NEWS.map(n => `
     <div class="newsItem">
@@ -275,6 +327,28 @@ function openMenu() {
     </div>`).join('');
   document.getElementById('menuOverlay').classList.add('show');
 }
+
+document.getElementById('nameSettingEditBtn').addEventListener('click', () => {
+  const form = document.getElementById('nameSettingForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('nameSettingSave').addEventListener('click', async () => {
+  const newName = document.getElementById('nameSettingInput').value.trim();
+  const msg = document.getElementById('nameSettingMsg');
+  if (!newName) { msg.textContent = 'なまえを入れてください'; return; }
+  const oldName = localStorage.getItem('doub_name');
+  msg.textContent = '保存中…';
+  if (oldName && oldName !== newName) {
+    const { error } = await sb.rpc('rename_score', {
+      p_old_name: oldName, p_new_name: newName, p_score: 0, p_device_id: deviceId
+    });
+    if (error) { msg.textContent = '保存に失敗しました'; return; }
+  }
+  localStorage.setItem('doub_name', newName);
+  msg.textContent = '✅ 保存しました！';
+  setTimeout(() => refreshNameSetting(), 1000);
+});
 function closeMenu() {
   document.getElementById('menuOverlay').classList.remove('show');
 }
