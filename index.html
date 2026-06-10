@@ -305,9 +305,18 @@ const DANGER  = UI + 22;// game-over danger line
 
 // ── お知らせ ──────────────────────────────────────────────
 const NEWS = [
-  { date: '2026-06-10', text: 'ランキング機能を追加しました！名前を登録してスコアを競おう🏆', isNew: true },
-  { date: '2026-06-10', text: 'どうぶつドロップをリリースしました！遊んでくれてありがとう🎉', isNew: true },
+  { date: '2026-06-10', text: '💣 ボム登場！たまに降ってくるボムをタップすると周囲の動物を一掃できるよ！', isNew: true },
+  { date: '2026-06-10', text: '🐉 ドラゴン合体で全消し！2体のドラゴンを合体させると画面の動物が全部消えるよ！', isNew: true },
+  { date: '2026-06-10', text: '📊 デイリーランキング追加！今日だけのランキングと最近の記録が見られるようになったよ！', isNew: true },
+  { date: '2026-06-10', text: 'ランキング機能を追加しました！名前を登録してスコアを競おう🏆', isNew: false },
+  { date: '2026-06-10', text: 'どうぶつドロップをリリースしました！遊んでくれてありがとう🎉', isNew: false },
 ];
+
+const NEWS_LAST_READ_KEY = 'doub_news_read';
+function getUnreadCount() {
+  const lastRead = localStorage.getItem(NEWS_LAST_READ_KEY) || '';
+  return NEWS.filter(n => n.isNew && n.date > lastRead).length;
+}
 
 function refreshNameSetting() {
   const saved = localStorage.getItem('doub_name');
@@ -328,6 +337,7 @@ function openMenu() {
       <div class="newsDate">${n.date}${n.isNew ? '<span class="newsNew">NEW</span>' : ''}</div>
       <div class="newsText">${n.text}</div>
     </div>`).join('');
+  localStorage.setItem(NEWS_LAST_READ_KEY, new Date().toISOString().slice(0, 10));
   document.getElementById('menuOverlay').classList.add('show');
 }
 
@@ -1460,6 +1470,15 @@ function draw() {
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('☰ メニュー', 342, 89);
+  // 未読バッジ
+  const unread = getUnreadCount();
+  if (unread > 0) {
+    ctx.beginPath(); ctx.arc(384, 77, 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#ec4899'; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(unread, 384, 77);
+  }
 
   // ── Evolution chart overlay ──
   if (showEvolution) {
