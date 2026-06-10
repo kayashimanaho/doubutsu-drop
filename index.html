@@ -62,6 +62,69 @@
       padding: 11px 18px; font-size: 14px; cursor: pointer;
     }
     #nameStatus { margin-top: 12px; font-size: 13px; color: rgba(255,255,255,0.6); }
+
+    /* ── ハンバーガーメニュー ── */
+    #menuOverlay {
+      display: none;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 30; border-radius: 18px;
+      justify-content: flex-end;
+    }
+    #menuOverlay.show { display: flex; }
+    #menuPanel {
+      width: 78%; height: 100%;
+      background: linear-gradient(180deg, #1e0b4a 0%, #2d1b69 100%);
+      border-left: 2px solid rgba(180,100,255,0.4);
+      border-radius: 0 18px 18px 0;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    #menuHeader {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid rgba(180,100,255,0.25);
+      flex-shrink: 0;
+    }
+    #menuHeader h2 { color: #fff; font-size: 17px; }
+    #menuClose {
+      background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.7);
+      border: none; border-radius: 20px; padding: 6px 14px;
+      font-size: 13px; cursor: pointer;
+    }
+    #menuBody {
+      overflow-y: auto; flex: 1; padding: 12px 14px 20px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .menuSection { margin-bottom: 22px; }
+    .menuSectionTitle {
+      font-size: 13px; font-weight: bold;
+      color: #a78bfa; letter-spacing: 0.05em;
+      margin-bottom: 10px; padding-bottom: 5px;
+      border-bottom: 1px solid rgba(167,139,250,0.25);
+    }
+    .newsItem {
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+    }
+    .newsDate { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 3px; }
+    .newsText { font-size: 13px; color: #fff; line-height: 1.5; }
+    .newsNew {
+      display: inline-block; background: #ec4899;
+      color: #fff; font-size: 10px; font-weight: bold;
+      padding: 1px 6px; border-radius: 8px; margin-left: 6px;
+      vertical-align: middle;
+    }
+    .menuActionBtn {
+      width: 100%; padding: 11px; border-radius: 12px;
+      background: rgba(168,85,247,0.25); border: 1px solid rgba(168,85,247,0.4);
+      color: #fff; font-size: 14px; cursor: pointer; margin-bottom: 8px;
+      text-align: left;
+    }
+    .howToItem {
+      font-size: 13px; color: rgba(255,255,255,0.75);
+      line-height: 1.7; padding: 4px 0;
+    }
   </style>
 </head>
 <body>
@@ -77,6 +140,31 @@
         <button id="nameSkip">スキップ</button>
       </div>
       <div id="nameStatus"></div>
+    </div>
+  </div>
+  <div id="menuOverlay">
+    <div id="menuPanel">
+      <div id="menuHeader">
+        <h2>☰ メニュー</h2>
+        <button id="menuClose">✕ とじる</button>
+      </div>
+      <div id="menuBody">
+        <div class="menuSection">
+          <div class="menuSectionTitle">📢 お知らせ</div>
+          <div id="newsList"></div>
+        </div>
+        <div class="menuSection">
+          <div class="menuSectionTitle">🎮 あそびかた</div>
+          <div class="howToItem">📱 スマホ：おしながら左右にうごかして、はなすと落とす</div>
+          <div class="howToItem">💻 PC：マウスで左右にうごかして、クリックで落とす</div>
+          <div class="howToItem">🐥 おなじどうぶつをくっつけるとしんかする！</div>
+          <div class="howToItem">🏆 たくさんしんかさせてハイスコアをめざそう！</div>
+        </div>
+        <div class="menuSection">
+          <div class="menuSectionTitle">📖 しんかひょう</div>
+          <button class="menuActionBtn" id="menuEvoBtn">📖 しんかひょうをみる →</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -106,6 +194,33 @@ const UI  = 105;        // UI panel height
 const FLOOR_Y = H - WT; // floor y
 const DLINE   = UI + 12;// drop y (preview center)
 const DANGER  = UI + 22;// game-over danger line
+
+// ── お知らせ ──────────────────────────────────────────────
+const NEWS = [
+  { date: '2026-06-10', text: 'ランキング機能を追加しました！名前を登録してスコアを競おう🏆', isNew: true },
+  { date: '2026-06-10', text: 'どうぶつドロップをリリースしました！遊んでくれてありがとう🎉', isNew: true },
+];
+
+function openMenu() {
+  const list = document.getElementById('newsList');
+  list.innerHTML = NEWS.map(n => `
+    <div class="newsItem">
+      <div class="newsDate">${n.date}${n.isNew ? '<span class="newsNew">NEW</span>' : ''}</div>
+      <div class="newsText">${n.text}</div>
+    </div>`).join('');
+  document.getElementById('menuOverlay').classList.add('show');
+}
+function closeMenu() {
+  document.getElementById('menuOverlay').classList.remove('show');
+}
+document.getElementById('menuClose').addEventListener('click', closeMenu);
+document.getElementById('menuOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('menuOverlay')) closeMenu();
+});
+document.getElementById('menuEvoBtn').addEventListener('click', () => {
+  closeMenu();
+  showEvolution = true;
+});
 
 // ── Animal definitions ────────────────────────────────────
 const A = [
@@ -666,7 +781,7 @@ function handleOverClick(cx, cy) {
 function handleUIClick(cx, cy) {
   if (cx > 6   && cx < 100 && cy > 75 && cy < 102) { snd.toggleMute(); return true; }
   if (cx > 101 && cx < 195 && cy > 75 && cy < 102) { togglePause(); return true; }
-  if (cx > 291 && cy > 75 && cy < 102) { showEvolution = !showEvolution; showRankingOverlay = false; return true; }
+  if (cx > 291 && cy > 75 && cy < 102) { openMenu(); return true; }
   if (cx > 196 && cx < 290 && cy > 75 && cy < 102) { toggleRankingOverlay(); return true; }
   // ポーズ中は画面タップで再開
   if (paused) { togglePause(); return true; }
@@ -952,12 +1067,12 @@ function draw() {
   ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('🏆 ランク', 243, 89);
 
-  // Evolution
+  // Menu button
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
   rrect(293, 77, 99, 23, 7); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('📖 図鑑', 342, 89);
+  ctx.fillText('☰ メニュー', 342, 89);
 
   // ── Evolution chart overlay ──
   if (showEvolution) {
