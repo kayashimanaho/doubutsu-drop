@@ -1,0 +1,13 @@
+{
+  "name": "どうぶつドロップ",
+  "short_name": "どうぶつドロップ",
+  "description": "同じどうぶつを合わせて進化させるパズルゲーム",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0320",
+  "theme_color": "#6020c0",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

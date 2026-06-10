@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>どうぶつドロップ</title>
   <meta name="description" content="同じどうぶつを合わせて、もっと大きなどうぶつに進化させよう！ひよこからはじまり、最強のドラゴンを目指せ！ふたつのドラゴンが出会ったとき、伝説が起きる🐉🔥ランキングに名前を刻もう！">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6020c0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="どうぶつドロップ">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="icon" href="/icon.svg">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4327528838162847"
      crossorigin="anonymous"></script>
   <style>
@@ -1981,6 +1989,9 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 resize();
+</script>
+<script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 </script>
 </body>
 </html>
