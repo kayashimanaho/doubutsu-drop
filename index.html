@@ -340,7 +340,8 @@ let parts = [];
 let overTimer = 0;
 let flashList = [];
 let showEvolution = false;
-let autoSubmitMsg = '';
+let autoSubmitMsg  = '';
+let pendingRename  = null;
 
 function rnd3() { return Math.floor(Math.random() * 3); }
 
@@ -694,14 +695,28 @@ document.getElementById('nameSubmit').addEventListener('click', async () => {
   if (!name) { nameStatus.textContent = 'なまえを入れてください！'; return; }
   nameStatus.textContent = '送信中…';
   document.getElementById('nameSubmit').disabled = true;
-  const result = await submitScore(name, score);
-  if (!result.ok) {
-    nameStatus.textContent = '送信に失敗しました。もう一度お試しください。';
-    document.getElementById('nameSubmit').disabled = false;
-    return;
+  const oldName = pendingRename;
+  pendingRename = null;
+  if (oldName && oldName !== name) {
+    const { error } = await sb.rpc('rename_score', { p_old_name: oldName, p_new_name: name, p_score: score });
+    if (error) {
+      nameStatus.textContent = '送信に失敗しました。もう一度お試しください。';
+      document.getElementById('nameSubmit').disabled = false;
+      pendingRename = oldName;
+      return;
+    }
+    localStorage.setItem('doub_name', name);
+    autoSubmitMsg = '✏️ なまえを変更しました！';
+  } else {
+    const result = await submitScore(name, score);
+    if (!result.ok) {
+      nameStatus.textContent = '送信に失敗しました。もう一度お試しください。';
+      document.getElementById('nameSubmit').disabled = false;
+      return;
+    }
+    localStorage.setItem('doub_name', name);
+    autoSubmitMsg = result.isNewRecord ? '🎉 新記録更新！' : `最高: ${(result.prevScore || score).toLocaleString()}点`;
   }
-  localStorage.setItem('doub_name', name);
-  autoSubmitMsg = result.isNewRecord ? '🎉 新記録更新！' : `最高: ${(result.prevScore || score).toLocaleString()}点`;
   hideNameOverlay();
   await fetchRanking();
   showRanking = true;
@@ -844,7 +859,7 @@ function handleOverClick(cx, cy) {
   if (showRanking) {
     if (cx > W/2-90 && cx < W/2+90 && cy > H-70 && cy < H-22) { restart(); return; }
     if (cx > W/2-65 && cx < W/2+65 && cy > H-102 && cy < H-76) {
-      localStorage.removeItem('doub_name');
+      pendingRename = localStorage.getItem('doub_name');
       showRanking = false;
       showNameOverlay();
     }
