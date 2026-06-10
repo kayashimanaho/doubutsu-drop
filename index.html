@@ -611,7 +611,7 @@ canvas.addEventListener('click', e => {
   if (!started) { started = true; return; }
   if (over)         { handleOverClick(cx, cy); return; }
   if (showEvolution){ showEvolution = false; return; }
-  if (showRankingOverlay && !(cx > 94 && cx < 144 && cy > 72 && cy < 100)) { showRankingOverlay = false; return; }
+  if (showRankingOverlay && !(cx > 196 && cx < 290 && cy > 75 && cy < 102)) { showRankingOverlay = false; return; }
   if (handleUIClick(cx, cy)) return;
   if (!dropping) drop();
 });
@@ -625,7 +625,7 @@ canvas.addEventListener('touchstart', e => {
   if (!started) { started = true; return; }
   if (over)          { handleOverClick(cx, cy); return; }
   if (showEvolution) { showEvolution = false; return; }
-  if (showRankingOverlay && !(cx > 94 && cx < 144 && cy > 72 && cy < 100)) { showRankingOverlay = false; return; }
+  if (showRankingOverlay && !(cx > 196 && cx < 290 && cy > 75 && cy < 102)) { showRankingOverlay = false; return; }
   if (handleUIClick(cx, cy)) return;
   touching = true;
   mx = cx;
@@ -659,10 +659,10 @@ function handleOverClick(cx, cy) {
   }
 }
 function handleUIClick(cx, cy) {
-  if (cx > 10  && cx < 46  && cy > 74 && cy < 98) { snd.toggleMute(); return true; }
-  if (cx > 52  && cx < 88  && cy > 74 && cy < 98) { togglePause(); return true; }
-  if (cx > 148 && cx < 188 && cy > 72 && cy < 100) { showEvolution = !showEvolution; showRankingOverlay = false; return true; }
-  if (cx > 94  && cx < 144 && cy > 72 && cy < 100) { toggleRankingOverlay(); return true; }
+  if (cx > 6   && cx < 100 && cy > 75 && cy < 102) { snd.toggleMute(); return true; }
+  if (cx > 101 && cx < 195 && cy > 75 && cy < 102) { togglePause(); return true; }
+  if (cx > 291 && cy > 75 && cy < 102) { showEvolution = !showEvolution; showRankingOverlay = false; return true; }
+  if (cx > 196 && cx < 290 && cy > 75 && cy < 102) { toggleRankingOverlay(); return true; }
   // ポーズ中は画面タップで再開
   if (paused) { togglePause(); return true; }
   return false;
@@ -893,64 +893,66 @@ function draw() {
   // Top border glow
   ctx.fillStyle = 'rgba(200,150,255,0.5)'; ctx.fillRect(0, UI - 3, W, 3);
 
+  // ── 上段：スコア / つぎ / 最高記録 (y:5-72) ──
   // Score box
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  rrect(10, 10, 115, 80, 10); ctx.fill();
+  rrect(8, 5, 118, 67, 10); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  ctx.fillText('スコア', 67, 33);
+  ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('スコア', 67, 24);
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 30px sans-serif';
-  ctx.fillText(score.toLocaleString(), 67, 72);
+  ctx.font = 'bold 26px sans-serif';
+  ctx.fillText(score.toLocaleString(), 67, 61);
 
   // Hi score box
   ctx.fillStyle = 'rgba(255,220,0,0.15)';
-  rrect(W-125, 10, 115, 80, 10); ctx.fill();
+  rrect(W-126, 5, 118, 67, 10); ctx.fill();
   ctx.fillStyle = 'rgba(255,220,100,0.8)';
-  ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('さいこうきろく', W-67, 30);
+  ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('さいこうきろく', W-67, 23);
   ctx.fillStyle = '#ffe090';
-  ctx.font = 'bold 26px sans-serif';
-  ctx.fillText(hi.toLocaleString(), W-67, 72);
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillText(hi.toLocaleString(), W-67, 61);
 
   // Next box
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  rrect(W/2-38, 8, 76, 84, 10); ctx.fill();
+  rrect(W/2-34, 5, 68, 67, 10); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('つぎ', W/2, 28);
-  ctx.font = "40px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+  ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('つぎ', W/2, 22);
+  ctx.font = "36px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
   ctx.fillStyle = '#000'; ctx.textBaseline = 'middle';
-  ctx.fillText(A[nxt].emoji, W/2, 68);
+  ctx.fillText(A[nxt].emoji, W/2, 52);
 
-  // Mute button
+  // ── 下段：4ボタン均等配置 (y:77-100) ──
+  // Mute
   ctx.fillStyle = snd.muted ? 'rgba(255,80,80,0.4)' : 'rgba(255,255,255,0.18)';
-  rrect(10, 74, 36, 24, 7); ctx.fill();
+  rrect(8, 77, 90, 23, 7); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.font = "16px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+  ctx.font = "15px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(snd.muted ? '🔇' : '🔊', 28, 86);
+  ctx.fillText(snd.muted ? '🔇' : '🔊', 53, 89);
 
-  // Pause button
+  // Pause
   ctx.fillStyle = paused ? 'rgba(255,200,50,0.45)' : 'rgba(255,255,255,0.18)';
-  rrect(52, 74, 36, 24, 7); ctx.fill();
+  rrect(103, 77, 90, 23, 7); ctx.fill();
   ctx.fillStyle = paused ? '#ffe066' : 'rgba(255,255,255,0.85)';
-  ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(paused ? '▶' : '⏸', 70, 86);
+  ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(paused ? '▶ 再開' : '⏸ 停止', 148, 89);
 
-  // Ranking button
+  // Ranking
   ctx.fillStyle = showRankingOverlay ? 'rgba(255,220,50,0.35)' : 'rgba(255,255,255,0.18)';
-  rrect(96, 74, 46, 24, 7); ctx.fill();
+  rrect(198, 77, 90, 23, 7); ctx.fill();
   ctx.fillStyle = showRankingOverlay ? '#ffe090' : 'rgba(255,255,255,0.7)';
-  ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('ランク', 119, 86);
+  ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('🏆 ランク', 243, 89);
 
-  // Evolution hint button
+  // Evolution
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  rrect(148, 74, 38, 24, 7); ctx.fill();
+  rrect(293, 77, 99, 23, 7); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('図鑑', 167, 86);
+  ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('📖 図鑑', 342, 89);
 
   // ── Evolution chart overlay ──
   if (showEvolution) {
