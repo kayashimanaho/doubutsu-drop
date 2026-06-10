@@ -319,7 +319,7 @@ function getUnreadCount() {
 }
 
 function refreshNameSetting() {
-  const saved = localStorage.getItem('doub_name');
+  const saved = getPersistent('doub_name');
   const el = document.getElementById('nameSettingCurrent');
   el.innerHTML = saved
     ? `<span style="font-size:11px;color:rgba(255,255,255,0.45)">登録名：</span>${saved}`
@@ -350,7 +350,7 @@ document.getElementById('nameSettingSave').addEventListener('click', async () =>
   const newName = document.getElementById('nameSettingInput').value.trim();
   const msg = document.getElementById('nameSettingMsg');
   if (!newName) { msg.textContent = 'なまえを入れてください'; return; }
-  const oldName = localStorage.getItem('doub_name');
+  const oldName = getPersistent('doub_name');
   msg.textContent = '保存中…';
   if (oldName && oldName !== newName) {
     const { error } = await sb.rpc('rename_score', {
@@ -358,7 +358,7 @@ document.getElementById('nameSettingSave').addEventListener('click', async () =>
     });
     if (error) { msg.textContent = '保存に失敗しました'; return; }
   }
-  localStorage.setItem('doub_name', newName);
+  setPersistent('doub_name', newName);
   msg.textContent = '✅ 保存しました！';
   setTimeout(() => refreshNameSetting(), 1000);
 });
@@ -803,11 +803,32 @@ let rankingTab         = 'all'; // 'all' | 'daily' | 'recent'
 let showRanking        = false;
 let showRankingOverlay = false;
 
-const deviceId = localStorage.getItem('doub_uuid') || (() => {
+// Cookie helpers（localStorageより消えにくい）
+function setCookie(key, val, days = 365) {
+  const ex = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${key}=${encodeURIComponent(val)};expires=${ex};path=/;SameSite=Lax`;
+}
+function getCookie(key) {
+  const m = document.cookie.match(new RegExp('(?:^|; )' + key + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function getPersistent(key) {
+  return getCookie(key) || localStorage.getItem(key);
+}
+function setPersistent(key, val) {
+  setCookie(key, val);
+  localStorage.setItem(key, val);
+}
+
+const deviceId = getPersistent('doub_uuid') || (() => {
   const id = crypto.randomUUID();
-  localStorage.setItem('doub_uuid', id);
+  setPersistent('doub_uuid', id);
   return id;
 })();
+// 既存のlocalStorageのみのデータをCookieにも同期
+if (!getCookie('doub_uuid')) setCookie('doub_uuid', deviceId);
+const _savedName = getPersistent('doub_name');
+if (_savedName && !getCookie('doub_name')) setCookie('doub_name', _savedName);
 
 async function fetchRanking() {
   const { data } = await sb.from('scores')
@@ -873,7 +894,7 @@ const nameStatus  = document.getElementById('nameStatus');
 function showNameOverlay() {
   document.getElementById('nameScoreDisp').textContent =
     `スコア: ${score.toLocaleString()}`;
-  nameInput.value = localStorage.getItem('doub_name') || '';
+  nameInput.value = getPersistent('doub_name') || '';
   nameStatus.textContent = '';
   nameOverlay.classList.add('show');
   setTimeout(() => nameInput.focus(), 100);
@@ -897,7 +918,7 @@ document.getElementById('nameSubmit').addEventListener('click', async () => {
       pendingRename = oldName;
       return;
     }
-    localStorage.setItem('doub_name', name);
+    setPersistent('doub_name', name);
     autoSubmitMsg = '✏️ なまえを変更しました！';
   } else {
     const result = await submitScore(name, score);
@@ -906,7 +927,7 @@ document.getElementById('nameSubmit').addEventListener('click', async () => {
       document.getElementById('nameSubmit').disabled = false;
       return;
     }
-    localStorage.setItem('doub_name', name);
+    setPersistent('doub_name', name);
     autoSubmitMsg = result.isNewRecord ? '🎉 新記録更新！' : `最高: ${(result.prevScore || score).toLocaleString()}点`;
   }
   hideNameOverlay();
@@ -1102,7 +1123,7 @@ function handleOverClick(cx, cy) {
     if (tappedTab) return;
     if (cx > W/2-90 && cx < W/2+90 && cy > H-70 && cy < H-22) { restart(); return; }
     if (cx > W/2-65 && cx < W/2+65 && cy > H-102 && cy < H-76) {
-      pendingRename = localStorage.getItem('doub_name');
+      pendingRename = getPersistent('doub_name');
       showRanking = false;
       showNameOverlay();
     }
@@ -1110,7 +1131,7 @@ function handleOverClick(cx, cy) {
     if (cx > W/2-90 && cx < W/2+90 && cy > H/2+65 && cy < H/2+105) restart();
     // Xシェアボタン
     if (cx > W/2-80 && cx < W/2+80 && cy > H/2+108 && cy < H/2+148) {
-      const name = localStorage.getItem('doub_name') || '';
+      const name = getPersistent('doub_name') || '';
       const text = `どうぶつドロップで${score.toLocaleString()}点とったよ！🐉\n${name ? `#${name} ` : ''}#どうぶつドロップ`;
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://doubutsu-drop.com')}`, '_blank');
     }
@@ -1196,7 +1217,7 @@ function checkOver(dt) {
     if (overTimer > 2000) {
       over = true; snd.gameOver();
       setTimeout(async () => {
-        const savedName = localStorage.getItem('doub_name');
+        const savedName = getPersistent('doub_name');
         if (savedName) {
           const result = await submitScore(savedName, score);
           autoSubmitMsg = result.isNewRecord ? '🎉 新記録更新！' : `最高: ${(result.prevScore || score).toLocaleString()}点`;
@@ -1628,7 +1649,7 @@ function draw() {
       });
 
       // 名前 & 結果メッセージ
-      const myName = localStorage.getItem('doub_name') || '';
+      const myName = getPersistent('doub_name') || '';
       ctx.font = '13px sans-serif';
       ctx.fillStyle = autoSubmitMsg.startsWith('🎉') ? '#ffe090' : 'rgba(255,255,255,0.65)';
       ctx.fillText(myName ? `${myName}  ${autoSubmitMsg}` : autoSubmitMsg, W/2, 96);
