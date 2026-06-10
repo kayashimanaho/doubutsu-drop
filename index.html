@@ -645,9 +645,15 @@ const sb = supabase.createClient(
   'https://mfazjpmpegbnkrxqlsha.supabase.co',
   'sb_publishable_PHhwTlbnxLI9-WAffqbmaQ_nboWZU5s'
 );
-let leaderboard       = [];
-let showRanking       = false;
+let leaderboard        = [];
+let showRanking        = false;
 let showRankingOverlay = false;
+
+const deviceId = localStorage.getItem('doub_uuid') || (() => {
+  const id = crypto.randomUUID();
+  localStorage.setItem('doub_uuid', id);
+  return id;
+})();
 
 async function fetchRanking() {
   const { data } = await sb.from('scores')
@@ -666,8 +672,8 @@ async function toggleRankingOverlay() {
 async function submitScore(name, scoreVal) {
   const nm = name.trim();
   const { data: existing } = await sb.from('scores')
-    .select('score').eq('name', nm).maybeSingle();
-  const { error } = await sb.rpc('upsert_score', { p_name: nm, p_score: scoreVal });
+    .select('score').eq('device_id', deviceId).maybeSingle();
+  const { error } = await sb.rpc('upsert_score', { p_name: nm, p_score: scoreVal, p_device_id: deviceId });
   if (error) return { ok: false };
   const isNewRecord = !existing || scoreVal > existing.score;
   return { ok: true, isNewRecord, prevScore: existing?.score };
@@ -698,7 +704,7 @@ document.getElementById('nameSubmit').addEventListener('click', async () => {
   const oldName = pendingRename;
   pendingRename = null;
   if (oldName && oldName !== name) {
-    const { error } = await sb.rpc('rename_score', { p_old_name: oldName, p_new_name: name, p_score: score });
+    const { error } = await sb.rpc('rename_score', { p_old_name: oldName, p_new_name: name, p_score: score, p_device_id: deviceId });
     if (error) {
       nameStatus.textContent = '送信に失敗しました。もう一度お試しください。';
       document.getElementById('nameSubmit').disabled = false;
