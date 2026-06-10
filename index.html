@@ -421,6 +421,9 @@ let autoSubmitMsg  = '';
 let pendingRename  = null;
 
 function rnd3() { return Math.floor(Math.random() * 3); }
+const BOMB_R = 28;
+const BOMB_BLAST = BOMB_R * 4; // 爆発範囲（狭め）
+let bombDropCount = 0; // 何回ドロップしたかカウント
 
 // ── Audio System ───────────────────────────────────────────
 class Sound {
@@ -1028,6 +1031,10 @@ canvas.addEventListener('click', e => {
     return;
   }
   if (handleUIClick(cx, cy)) return;
+  // ボムタップ判定
+  const tappedBomb = world.bodies.find(b => b.label === 'bomb' &&
+    Math.hypot(b.position.x - cx, b.position.y - cy) < BOMB_R + 10);
+  if (tappedBomb) { explodeBomb(tappedBomb); return; }
   if (!dropping) drop();
 });
 
@@ -1051,6 +1058,9 @@ canvas.addEventListener('touchstart', e => {
     return;
   }
   if (handleUIClick(cx, cy)) return;
+  const tappedBombT = world.bodies.find(b => b.label === 'bomb' &&
+    Math.hypot(b.position.x - cx, b.position.y - cy) < BOMB_R + 10);
+  if (tappedBombT) { explodeBomb(tappedBombT); return; }
   touching = true;
   mx = cx;
 }, { passive: false });
@@ -1087,7 +1097,13 @@ function handleOverClick(cx, cy) {
       showNameOverlay();
     }
   } else {
-    if (cx > W/2-90 && cx < W/2+90 && cy > H/2+65 && cy < H/2+115) restart();
+    if (cx > W/2-90 && cx < W/2+90 && cy > H/2+65 && cy < H/2+105) restart();
+    // Xシェアボタン
+    if (cx > W/2-80 && cx < W/2+80 && cy > H/2+108 && cy < H/2+148) {
+      const name = localStorage.getItem('doub_name') || '';
+      const text = `どうぶつドロップで${score.toLocaleString()}点とったよ！🐉\n${name ? `#${name} ` : ''}#どうぶつドロップ`;
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://doubutsu-drop.com')}`, '_blank');
+    }
   }
 }
 function handleUIClick(cx, cy) {
@@ -1101,17 +1117,55 @@ function handleUIClick(cx, cy) {
 }
 
 function drop() {
-  mkAnimal(clampX(), DLINE - 4, cur);
+  bombDropCount++;
+  if (bombDropCount >= 20 && Math.random() < 0.4) {
+    bombDropCount = 0;
+    mkBomb(clampX(), DLINE - 4);
+  } else {
+    mkAnimal(clampX(), DLINE - 4, cur);
+  }
   snd.drop();
   cur = nxt; nxt = rnd3();
   dropping = true;
   setTimeout(() => { dropping = false; }, 520);
 }
 
+function mkBomb(x, y) {
+  const b = Bodies.circle(x, y, BOMB_R, {
+    restitution: 0.3, friction: 0.5, frictionAir: 0.02, density: 0.004, label: 'bomb',
+  });
+  b.merged = false;
+  World.add(world, b);
+  return b;
+}
+
+function explodeBomb(bomb) {
+  const bx = bomb.position.x, by = bomb.position.y;
+  World.remove(world, bomb);
+  const animals = world.bodies.filter(bd => bd.label === 'animal');
+  let cleared = 0;
+  animals.forEach(bd => {
+    const dx = bd.position.x - bx, dy = bd.position.y - by;
+    if (Math.sqrt(dx*dx + dy*dy) < BOMB_BLAST + bd.circleRadius) {
+      burst(bd.position.x, bd.position.y, A[bd.atype].col, 10);
+      World.remove(world, bd);
+      cleared++;
+    }
+  });
+  burst(bx, by, '#FF6600', 20);
+  if (cleared > 0) flashList.push({ x: bx, y: by - 30, txt: `💥 ${cleared}匹消した！`, life: 1.8, col: '#FF6600' });
+  try {
+    const t = snd.ac.currentTime;
+    snd._note(80,  t,        0.4, 'sawtooth', 0.5, 0.005);
+    snd._note(120, t + 0.05, 0.3, 'sawtooth', 0.4, 0.005);
+    snd._note(200, t + 0.1,  0.2, 'sine',     0.3, 0.005);
+  } catch(e) {}
+}
+
 function restart() {
   [...world.bodies].filter(b => b.label === 'animal').forEach(b => World.remove(world, b));
   parts = []; flashList = [];
-  score = 0; over = false; dropping = false; overTimer = 0;
+  score = 0; over = false; dropping = false; overTimer = 0; bombDropCount = 0;
   showRanking = false; showRankingOverlay = false; leaderboard = []; autoSubmitMsg = '';
   hideNameOverlay();
   cur = rnd3(); nxt = rnd3();
@@ -1281,6 +1335,27 @@ function draw() {
     ctx.translate(b.position.x, b.position.y);
     ctx.rotate(b.angle);
     drawAnimal(0, 0, b.circleRadius, b.atype);
+    ctx.restore();
+  }
+
+  // ── Bombs ──
+  for (const b of world.bodies) {
+    if (b.label !== 'bomb') continue;
+    const bx = b.position.x, by = b.position.y;
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.rotate(b.angle);
+    // 爆発範囲プレビュー（薄い円）
+    ctx.beginPath(); ctx.arc(0, 0, BOMB_BLAST, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,100,0,0.08)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,100,0,0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
+    // ボム本体
+    ctx.beginPath(); ctx.arc(0, 0, BOMB_R, 0, Math.PI * 2);
+    ctx.fillStyle = '#222'; ctx.fill();
+    ctx.strokeStyle = '#FF6600'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.font = `${BOMB_R * 1.2}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('💣', 0, 2);
     ctx.restore();
   }
 
@@ -1616,13 +1691,22 @@ function draw() {
 
       ctx.fillStyle = '#ffe090';
       ctx.font = 'bold 32px sans-serif';
-      ctx.fillText(`スコア: ${score.toLocaleString()}`, W/2, H/2 + 35);
+      ctx.fillText(`スコア: ${score.toLocaleString()}`, W/2, H/2 + 20);
       ctx.fillStyle = '#aaa';
-      ctx.font = '20px sans-serif';
-      ctx.fillText(`さいこうきろく: ${hi.toLocaleString()}`, W/2, H/2 + 70);
+      ctx.font = '18px sans-serif';
+      ctx.fillText(`さいこうきろく: ${hi.toLocaleString()}`, W/2, H/2 + 56);
       ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.font = '14px sans-serif';
-      ctx.fillText('名前入力画面が出ます…', W/2, H/2 + 108);
+      ctx.font = '13px sans-serif';
+      ctx.fillText('名前入力画面が出ます…', W/2, H/2 + 88);
+
+      // Xシェアボタン
+      const sbx = W/2 - 80, sby = H/2 + 108;
+      ctx.fillStyle = '#000';
+      rrect(sbx, sby, 160, 40, 20); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 15px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('𝕏 でシェア', W/2, sby + 20);
 
       if (score > 0) {
         const maxPts = A.reduce((s,a) => s+a.pts, 0) * 3;
