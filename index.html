@@ -67,14 +67,19 @@ const A = [
 ];
 
 // ── Physics engine ────────────────────────────────────────
-const engine = Engine.create({ gravity: { y: 1.8 } });
-const world  = engine.world;
+const engine = Engine.create({
+  gravity: { y: 1.2 },
+  positionIterations: 10,  // 衝突解決の精度を上げる
+  velocityIterations: 8,
+});
+const world = engine.world;
 
+// 床は200px厚にしてトンネリングを防ぐ（見た目の床ラインはFLOOR_Yで別途描画）
 World.add(world, [
-  Bodies.rectangle(W/2,    H - WT/2,  W + 4, WT,     { isStatic:true, label:'wall', friction:0.9, restitution:0.1 }),
-  Bodies.rectangle(LX/2,   H/2,       WT,    H*2,    { isStatic:true, label:'wall' }),
-  Bodies.rectangle(W-WT/2, H/2,       WT,    H*2,    { isStatic:true, label:'wall' }),
-  Bodies.rectangle(W/2,    -WT/2,     W + 4, WT,     { isStatic:true, label:'ceil' }),
+  Bodies.rectangle(W/2,    FLOOR_Y + 100, W + 4, 200,   { isStatic:true, label:'wall', friction:0.9, restitution:0.05 }),
+  Bodies.rectangle(LX/2,   H/2,           WT,    H*2,   { isStatic:true, label:'wall' }),
+  Bodies.rectangle(W-WT/2, H/2,           WT,    H*2,   { isStatic:true, label:'wall' }),
+  Bodies.rectangle(W/2,    -WT/2,         W + 4, WT,    { isStatic:true, label:'ceil' }),
 ]);
 
 // ── Game state ────────────────────────────────────────────
@@ -378,7 +383,7 @@ function mkAnimal(x, y, type) {
   const b = Bodies.circle(x, y, A[type].r, {
     restitution: 0.22,
     friction:    0.65,
-    frictionAir: 0.009,
+    frictionAir: 0.025,
     density:     0.003,
     label: 'animal',
   });
@@ -892,6 +897,10 @@ function loop(now) {
   const dt = now - lastT; lastT = now;
 
   if (!over && !showEvolution && started) checkOver(dt);
+  // 安全網：床をすり抜けた物体を除去
+  for (const b of [...world.bodies]) {
+    if (b.label === 'animal' && b.position.y > H + 150) World.remove(world, b);
+  }
 
   // Update particles
   for (const p of parts) {
