@@ -1811,48 +1811,107 @@ function draw() {
   // ── スタート画面 ──
   if (!started) {
     ctx.save();
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0); // transformをリセットしてDPRだけ適用
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const t = performance.now() / 1000;
 
-    ctx.fillStyle = 'rgba(20,10,50,0.88)';
-    ctx.fillRect(0, 0, W, H);
+    // 背景グラデーション
+    const startBg = ctx.createLinearGradient(0, 0, 0, H);
+    startBg.addColorStop(0, '#080218');
+    startBg.addColorStop(0.5, '#150638');
+    startBg.addColorStop(1, '#220c50');
+    ctx.fillStyle = startBg; ctx.fillRect(0, 0, W, H);
 
-    // タイトル
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    // きらきら星
+    [[42,75],[118,130],[322,55],[195,210],[355,295],[58,345],[282,415],
+     [152,495],[382,470],[88,572],[342,575],[238,548],[28,455],[372,145],
+     [178,345],[312,228],[165,78],[292,528],[220,390],[80,250]
+    ].forEach(([sx, sy], i) => {
+      const a = 0.2 + 0.8 * Math.abs(Math.sin(t * 0.7 + i * 1.1));
+      ctx.beginPath(); ctx.arc(sx, sy, 1 + (i % 3) * 0.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`; ctx.fill();
+    });
+
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    // タイトル周りの光背
+    const titleHalo = ctx.createRadialGradient(W/2, 120, 0, W/2, 120, 170);
+    titleHalo.addColorStop(0, 'rgba(168,85,247,0.22)');
+    titleHalo.addColorStop(1, 'rgba(168,85,247,0)');
+    ctx.fillStyle = titleHalo; ctx.fillRect(0, 0, W, 290);
+
+    // ロゴ絵文字（ドラゴン）
+    ctx.font = "64px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+    const dragonY = 66 + Math.sin(t * 1.1) * 4;
+    ctx.fillText('🐉', W/2, dragonY);
+
+    // タイトル文字
+    ctx.shadowColor = '#c084fc';
+    ctx.shadowBlur = 22 + 10 * Math.abs(Math.sin(t * 1.3));
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 36px sans-serif';
-    ctx.fillText('どうぶつドロップ', W / 2, 155);
+    ctx.fillText('どうぶつドロップ', W/2, 124);
+    ctx.shadowBlur = 0;
 
-    // どうぶつ絵文字（フォント明示）
-    ctx.font = "44px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
-    ctx.fillStyle = '#000';
-    ctx.fillText('🐥🐰🐱🐶🐨', W / 2, 225);
+    // サブタイトル
+    ctx.fillStyle = 'rgba(192,132,252,0.8)';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('〜 ドラゴンを目指せ！ 〜', W/2, 152);
 
-    // タップボタン
-    const bx = W / 2 - 115;
-    const by = 278;
+    // 区切り線（グラデーション）
+    const sepG = ctx.createLinearGradient(40, 0, W-40, 0);
+    sepG.addColorStop(0, 'rgba(168,85,247,0)');
+    sepG.addColorStop(0.5, 'rgba(168,85,247,0.5)');
+    sepG.addColorStop(1, 'rgba(168,85,247,0)');
+    ctx.strokeStyle = sepG; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(40, 170); ctx.lineTo(W-40, 170); ctx.stroke();
+
+    // 動物（弧状＋ふわふわ浮遊）
+    const startAnims = ['🐥','🐰','🐱','🐶','🐨','🐼','🦁','🐘','🦕','🐉'];
+    ctx.font = "28px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+    startAnims.forEach((em, i) => {
+      const p = i / (startAnims.length - 1);
+      const x = 24 + p * 352;
+      const y = 238 - Math.sin(Math.PI * p) * 26 + Math.sin(t * 0.9 + i * 0.75) * 7;
+      ctx.fillText(em, x, y);
+    });
+
+    // ヒントテキスト
+    ctx.fillStyle = 'rgba(192,132,252,0.6)';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('同じどうぶつをくっつけるとしんか！', W/2, 282);
+
+    // スタートボタン
+    const bx = W/2 - 115, by = 314;
+    ctx.shadowColor = '#ec4899';
+    ctx.shadowBlur = 14 + 12 * Math.abs(Math.sin(t * 2));
     if (gameReady) {
-      const sbg = ctx.createLinearGradient(bx, 0, bx + 230, 0);
+      const sbg = ctx.createLinearGradient(bx, 0, bx+230, 0);
       sbg.addColorStop(0, '#a855f7'); sbg.addColorStop(1, '#ec4899');
       ctx.fillStyle = sbg;
-      rrect(bx, by, 230, 58, 29); ctx.fill();
+      rrect(bx, by, 230, 56, 28); ctx.fill();
+      ctx.shadowBlur = 0;
       ctx.fillStyle = '#fff';
-      ctx.font = 'bold 21px sans-serif';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('スタート！', W / 2, by + 29);
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText('🎮 スタート！', W/2, by+28);
     } else {
-      ctx.fillStyle = 'rgba(255,255,255,0.25)';
-      rrect(bx, by, 230, 58, 29); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      ctx.font = '16px sans-serif';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('読み込み中…', W / 2, by + 29);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      rrect(bx, by, 230, 56, 28); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '15px sans-serif';
+      ctx.fillText('読み込み中…', W/2, by+28);
     }
 
-    // 操作説明（絵文字なし・短く）
-    ctx.fillStyle = 'rgba(255,255,255,0.62)';
-    ctx.font = '13px sans-serif';
-    ctx.fillText('押しながら動かして、はなして落とす', W / 2, 382);
+    // 操作説明
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('押しながら動かして、はなして落とす', W/2, 400);
+
+    // ランキング告知
+    ctx.fillStyle = 'rgba(255,220,80,0.45)';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('🏆 名前を登録してランキングに挑戦！', W/2, 422);
 
     ctx.restore();
   }
