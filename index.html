@@ -818,17 +818,67 @@ function getPersistent(key) {
 function setPersistent(key, val) {
   setCookie(key, val);
   localStorage.setItem(key, val);
+  idbSet(key, val);
 }
 
-const deviceId = getPersistent('doub_uuid') || (() => {
-  const id = crypto.randomUUID();
-  setPersistent('doub_uuid', id);
-  return id;
+// ── IndexedDB（Cookie/localStorage両方消えても残る最終防衛線） ──
+const _IDB = 'doub_drop', _IDB_ST = 'prefs';
+function _openIDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(_IDB, 1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore(_IDB_ST);
+    r.onsuccess = e => res(e.target.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbGet(key) {
+  try {
+    const db = await _openIDB();
+    return await new Promise(res => {
+      const r = db.transaction(_IDB_ST).objectStore(_IDB_ST).get(key);
+      r.onsuccess = () => res(r.result ?? null);
+      r.onerror = () => res(null);
+    });
+  } catch { return null; }
+}
+async function idbSet(key, val) {
+  try {
+    const db = await _openIDB();
+    await new Promise(res => {
+      const tx = db.transaction(_IDB_ST, 'readwrite');
+      tx.objectStore(_IDB_ST).put(val, key);
+      tx.oncomplete = res; tx.onerror = res;
+    });
+  } catch {}
+}
+
+let deviceId = '';
+let gameReady = false;
+
+(async () => {
+  if (navigator.storage?.persist) navigator.storage.persist();
+
+  let id = getPersistent('doub_uuid');
+  let name = getPersistent('doub_name');
+
+  // Cookie/localStorageが消えていたらIndexedDBから復元
+  if (!id) {
+    id = await idbGet('doub_uuid');
+    if (id) { setCookie('doub_uuid', id); localStorage.setItem('doub_uuid', id); }
+  }
+  if (!name) {
+    const n = await idbGet('doub_name');
+    if (n) { setCookie('doub_name', n); localStorage.setItem('doub_name', n); }
+  }
+
+  if (!id) {
+    id = crypto.randomUUID();
+    setPersistent('doub_uuid', id);
+  }
+
+  deviceId = id;
+  gameReady = true;
 })();
-// 既存のlocalStorageのみのデータをCookieにも同期
-if (!getCookie('doub_uuid')) setCookie('doub_uuid', deviceId);
-const _savedName = getPersistent('doub_name');
-if (_savedName && !getCookie('doub_name')) setCookie('doub_name', _savedName);
 
 async function fetchRanking() {
   const { data } = await sb.from('scores')
@@ -1048,7 +1098,7 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('click', e => {
   snd.boot();
   const [cx, cy] = toCanvas(e.clientX, e.clientY);
-  if (!started) { started = true; return; }
+  if (!started) { if (!gameReady) return; started = true; return; }
   if (over)         { handleOverClick(cx, cy); return; }
   if (showEvolution){ showEvolution = false; return; }
   if (showRankingOverlay) {
@@ -1075,7 +1125,7 @@ canvas.addEventListener('touchstart', e => {
   snd.boot();
   const t = e.touches[0];
   const [cx, cy] = toCanvas(t.clientX, t.clientY);
-  if (!started) { started = true; return; }
+  if (!started) { if (!gameReady) return; started = true; return; }
   if (over)          { handleOverClick(cx, cy); return; }
   if (showEvolution) { showEvolution = false; return; }
   if (showRankingOverlay) {
@@ -1781,14 +1831,23 @@ function draw() {
     // タップボタン
     const bx = W / 2 - 115;
     const by = 278;
-    const sbg = ctx.createLinearGradient(bx, 0, bx + 230, 0);
-    sbg.addColorStop(0, '#a855f7'); sbg.addColorStop(1, '#ec4899');
-    ctx.fillStyle = sbg;
-    rrect(bx, by, 230, 58, 29); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 21px sans-serif';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('スタート！', W / 2, by + 29);
+    if (gameReady) {
+      const sbg = ctx.createLinearGradient(bx, 0, bx + 230, 0);
+      sbg.addColorStop(0, '#a855f7'); sbg.addColorStop(1, '#ec4899');
+      ctx.fillStyle = sbg;
+      rrect(bx, by, 230, 58, 29); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 21px sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('スタート！', W / 2, by + 29);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      rrect(bx, by, 230, 58, 29); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.font = '16px sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('読み込み中…', W / 2, by + 29);
+    }
 
     // 操作説明（絵文字なし・短く）
     ctx.fillStyle = 'rgba(255,255,255,0.62)';
