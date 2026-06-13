@@ -313,8 +313,7 @@ const DANGER  = UI + 22;// game-over danger line
 
 // ── お知らせ ──────────────────────────────────────────────
 const NEWS = [
-  { date: '2026-06-10', text: '💣 ボム登場！たまに降ってくるボムをタップすると周囲の動物を一掃できるよ！', isNew: true },
-  { date: '2026-06-10', text: '🐉 ドラゴン合体で全消し！2体のドラゴンを合体させると画面の動物が全部消えるよ！', isNew: true },
+{ date: '2026-06-10', text: '🐉 ドラゴン合体で全消し！2体のドラゴンを合体させると画面の動物が全部消えるよ！', isNew: true },
   { date: '2026-06-10', text: '📊 デイリーランキング追加！今日だけのランキングと最近の記録が見られるようになったよ！', isNew: true },
   { date: '2026-06-10', text: 'ランキング機能を追加しました！名前を登録してスコアを競おう🏆', isNew: false },
   { date: '2026-06-10', text: 'どうぶつドロップをリリースしました！遊んでくれてありがとう🎉', isNew: false },
@@ -439,9 +438,6 @@ let autoSubmitMsg  = '';
 let pendingRename  = null;
 
 function rnd3() { return Math.floor(Math.random() * 3); }
-const BOMB_R = 28;
-const BOMB_BLAST = BOMB_R * 4; // 爆発範囲（狭め）
-let bombDropCount = 0; // 何回ドロップしたかカウント
 
 // ── Audio System ───────────────────────────────────────────
 class Sound {
@@ -1120,10 +1116,6 @@ canvas.addEventListener('click', e => {
     return;
   }
   if (handleUIClick(cx, cy)) return;
-  // ボムタップ判定
-  const tappedBomb = world.bodies.find(b => b.label === 'bomb' &&
-    Math.hypot(b.position.x - cx, b.position.y - cy) < BOMB_R + 10);
-  if (tappedBomb) { explodeBomb(tappedBomb); return; }
   if (!dropping) drop();
 });
 
@@ -1147,9 +1139,6 @@ canvas.addEventListener('touchstart', e => {
     return;
   }
   if (handleUIClick(cx, cy)) return;
-  const tappedBombT = world.bodies.find(b => b.label === 'bomb' &&
-    Math.hypot(b.position.x - cx, b.position.y - cy) < BOMB_R + 10);
-  if (tappedBombT) { explodeBomb(tappedBombT); return; }
   touching = true;
   mx = cx;
 }, { passive: false });
@@ -1206,55 +1195,18 @@ function handleUIClick(cx, cy) {
 }
 
 function drop() {
-  bombDropCount++;
-  if (bombDropCount >= 50 && Math.random() < 0.15) {
-    bombDropCount = 0;
-    mkBomb(clampX(), DLINE - 4);
-  } else {
-    mkAnimal(clampX(), DLINE - 4, cur);
-  }
+  mkAnimal(clampX(), DLINE - 4, cur);
   snd.drop();
   cur = nxt; nxt = rnd3();
   dropping = true;
   setTimeout(() => { dropping = false; }, 520);
 }
 
-function mkBomb(x, y) {
-  const b = Bodies.circle(x, y, BOMB_R, {
-    restitution: 0.3, friction: 0.5, frictionAir: 0.02, density: 0.004, label: 'bomb',
-  });
-  b.merged = false;
-  World.add(world, b);
-  return b;
-}
-
-function explodeBomb(bomb) {
-  const bx = bomb.position.x, by = bomb.position.y;
-  World.remove(world, bomb);
-  const animals = world.bodies.filter(bd => bd.label === 'animal');
-  let cleared = 0;
-  animals.forEach(bd => {
-    const dx = bd.position.x - bx, dy = bd.position.y - by;
-    if (Math.sqrt(dx*dx + dy*dy) < BOMB_BLAST + bd.circleRadius) {
-      burst(bd.position.x, bd.position.y, A[bd.atype].col, 10);
-      World.remove(world, bd);
-      cleared++;
-    }
-  });
-  burst(bx, by, '#FF6600', 20);
-  if (cleared > 0) flashList.push({ x: bx, y: by - 30, txt: `💥 ${cleared}匹消した！`, life: 1.8, col: '#FF6600' });
-  try {
-    const t = snd.ac.currentTime;
-    snd._note(80,  t,        0.4, 'sawtooth', 0.5, 0.005);
-    snd._note(120, t + 0.05, 0.3, 'sawtooth', 0.4, 0.005);
-    snd._note(200, t + 0.1,  0.2, 'sine',     0.3, 0.005);
-  } catch(e) {}
-}
 
 function restart() {
   [...world.bodies].filter(b => b.label === 'animal').forEach(b => World.remove(world, b));
   parts = []; flashList = [];
-  score = 0; over = false; dropping = false; overTimer = 0; bombDropCount = 0;
+  score = 0; over = false; dropping = false; overTimer = 0;
   showRanking = false; showRankingOverlay = false; leaderboard = []; autoSubmitMsg = '';
   hideNameOverlay();
   cur = rnd3(); nxt = rnd3();
@@ -1427,26 +1379,6 @@ function draw() {
     ctx.restore();
   }
 
-  // ── Bombs ──
-  for (const b of world.bodies) {
-    if (b.label !== 'bomb') continue;
-    const bx = b.position.x, by = b.position.y;
-    ctx.save();
-    ctx.translate(bx, by);
-    ctx.rotate(b.angle);
-    // 爆発範囲プレビュー（薄い円）
-    ctx.beginPath(); ctx.arc(0, 0, BOMB_BLAST, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,100,0,0.08)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(255,100,0,0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
-    // ボム本体
-    ctx.beginPath(); ctx.arc(0, 0, BOMB_R, 0, Math.PI * 2);
-    ctx.fillStyle = '#222'; ctx.fill();
-    ctx.strokeStyle = '#FF6600'; ctx.lineWidth = 3; ctx.stroke();
-    ctx.font = `${BOMB_R * 1.2}px sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('💣', 0, 2);
-    ctx.restore();
-  }
 
   // ── Particles ──
   for (const p of parts) {
