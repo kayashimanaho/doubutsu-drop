@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>更新履歴｜どうぶつドロップ</title>
+  <meta name="description" content="どうぶつドロップの更新履歴・新機能のお知らせです。">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: radial-gradient(ellipse at center, #2d1b69 0%, #1a0f40 100%);
+      min-height: 100vh; color: rgba(255,255,255,0.85);
+      font-family: sans-serif; line-height: 1.8; padding: 40px 24px 80px;
+    }
+    .wrap { max-width: 680px; margin: 0 auto; }
+    .logo { font-size: 28px; font-weight: bold; margin-bottom: 6px; }
+    .logo a { text-decoration: none; color: #fff; }
+    nav { margin-bottom: 32px; font-size: 13px; color: rgba(255,255,255,0.45); }
+    nav a { color: #c084fc; text-decoration: none; }
+    h1 { font-size: 22px; color: #c084fc; margin-bottom: 24px; padding-bottom: 10px; border-bottom: 1px solid rgba(192,132,252,0.3); }
+    .update-item { margin-bottom: 28px; padding-bottom: 28px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .update-item:last-child { border-bottom: none; }
+    .update-date { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 4px; }
+    .update-version { font-size: 16px; font-weight: bold; color: #c084fc; margin-bottom: 10px; }
+    .update-tag { display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 8px; margin-right: 4px; margin-bottom: 8px; }
+    .tag-new { background: #a855f7; color: #fff; }
+    .tag-fix { background: #3b82f6; color: #fff; }
+    .tag-improve { background: #10b981; color: #fff; }
+    ul { padding-left: 20px; }
+    li { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 6px; }
+    a { color: #c084fc; }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: rgba(255,255,255,0.3); text-align: center; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo"><a href="/">🐉 どうぶつドロップ</a></div>
+  <nav><a href="/">← トップに戻る</a></nav>
+
+  <h1>更新履歴</h1>
+
+  <div class="update-item">
+    <div class="update-date">2026年6月</div>
+    <div class="update-version">v1.4.0</div>
+    <span class="update-tag tag-new">NEW</span>
+    <span class="update-tag tag-improve">改善</span>
+    <ul>
+      <li>プライバシーポリシー・利用規約・FAQページを追加</li>
+      <li>トップページにゲーム説明・遊び方・進化表を追加</li>
+      <li>ホーム画面へのアイコン追加（PWA）に対応</li>
+      <li>メニューが端末によって縦長になる問題を修正</li>
+    </ul>
+  </div>
+
+  <div class="update-item">
+    <div class="update-date">2026年6月</div>
+    <div class="update-version">v1.3.0</div>
+    <span class="update-tag tag-new">NEW</span>
+    <ul>
+      <li>トップページ（スタート画面）をリデザイン</li>
+      <li>ドラゴンロゴ・星のアニメーション・動物の弧状配置を追加</li>
+      <li>スタートボタンにグロー（発光）エフェクトを追加</li>
+    </ul>
+  </div>
+
+  <div class="update-item">
+    <div class="update-date">2026年6月</div>
+    <div class="update-version">v1.2.0</div>
+    <span class="update-tag tag-new">NEW</span>
+    <span class="update-tag tag-fix">修正</span>
+    <ul>
+      <li>IndexedDBを追加してdevice_idと名前の永続化を強化（iOSでデータが消える問題に対応）</li>
+      <li>デイリーランキング・最近の記録タブを追加</li>
+      <li>お知らせに未読バッジ表示を実装</li>
+      <li>Xシェアボタンを追加</li>
+    </ul>
+  </div>
+
+  <div class="update-item">
+    <div class="update-date">2026年6月</div>
+    <div class="update-version">v1.1.0</div>
+    <span class="update-tag tag-new">NEW</span>
+    <ul>
+      <li>🐉 ドラゴン合体で全消し機能を追加（2体のドラゴンが合体すると画面の動物を全消し＋ボーナス300点）</li>
+      <li>ランキング機能を追加（ニックネームを登録してスコアを競える）</li>
+      <li>BGMとサウンドエフェクトを追加</li>
+      <li>ポーズ機能を追加</li>
+    </ul>
+  </div>
+
+  <div class="update-item">
+    <div class="update-date">2026年6月</div>
+    <div class="update-version">v1.0.0</div>
+    <span class="update-tag tag-new">NEW</span>
+    <ul>
+      <li>どうぶつドロップをリリース</li>
+      <li>10種類のどうぶつ（ひよこ〜ドラゴン）の合体・進化システム</li>
+      <li>物理エンジン（Matter.js）による自然などうぶつの動き</li>
+      <li>スマートフォン・PCの両対応</li>
+    </ul>
+  </div>
+
+  <footer>© 2026 どうぶつドロップ ｜ <a href="/">トップ</a> ｜ <a href="/faq.html">FAQ</a> ｜ <a href="/privacy.html">プライバシーポリシー</a> ｜ <a href="/terms.html">利用規約</a></footer>
+</div>
+</body>
+</html>
