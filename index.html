@@ -21,12 +21,47 @@
       background: radial-gradient(ellipse at center, #2d1b69 0%, #1a0f40 100%);
       display: flex;
       flex-direction: column;
-      justify-content: center;
       align-items: center;
       min-height: 100vh;
-      overflow: hidden;
-      touch-action: none;
+      overflow-x: hidden;
     }
+    #gameArea {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100%;
+    }
+    #pageContent {
+      width: 100%; max-width: 680px;
+      padding: 40px 24px 60px;
+      color: rgba(255,255,255,0.85);
+      font-family: sans-serif;
+      line-height: 1.8;
+    }
+    #pageContent h2 {
+      font-size: 20px; font-weight: bold; color: #c084fc;
+      margin: 32px 0 12px; padding-bottom: 6px;
+      border-bottom: 1px solid rgba(192,132,252,0.3);
+    }
+    #pageContent h2:first-child { margin-top: 0; }
+    #pageContent p { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 10px; }
+    #pageContent ul { font-size: 14px; color: rgba(255,255,255,0.75); padding-left: 20px; margin-bottom: 10px; }
+    #pageContent li { margin-bottom: 6px; }
+    .animalEvolution {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+      font-size: 22px; margin: 12px 0;
+    }
+    .evoArrow { font-size: 14px; color: rgba(255,255,255,0.4); }
+    #pageFooter {
+      width: 100%; border-top: 1px solid rgba(255,255,255,0.1);
+      padding: 20px 24px; text-align: center;
+      font-size: 12px; color: rgba(255,255,255,0.35);
+      font-family: sans-serif;
+    }
+    #pageFooter a { color: rgba(192,132,252,0.7); text-decoration: none; margin: 0 10px; }
+    #pageFooter a:hover { color: #c084fc; }
     canvas {
       display: block;
       cursor: default;
@@ -183,6 +218,7 @@
   </style>
 </head>
 <body>
+<div id="gameArea">
 <div id="gameWrap">
   <canvas id="c"></canvas>
   <div id="nameOverlay">
@@ -284,6 +320,58 @@
     </div>
   </div>
 </div>
+</div><!-- /gameWrap -->
+
+<div id="pageContent">
+  <h2>🐉 どうぶつドロップとは？</h2>
+  <p>「どうぶつドロップ」は、落ちてくるどうぶつを同じ種類どうし合体させて、より大きなどうぶつへと進化させていくブラウザパズルゲームです。スマートフォン・PCどちらでも無料で遊べます。</p>
+  <p>小さなひよこからスタートして、ウサギ・ネコ・イヌ・コアラ・パンダ・ライオン・ゾウ・きょうりゅうを経て、最強の🐉ドラゴンを目指しましょう！さらに2体のドラゴンが合体すると……伝説が起きる！</p>
+
+  <h2>🎮 遊び方</h2>
+  <ul>
+    <li><strong>スマートフォン：</strong>画面を押しながら左右に動かし、はなすとどうぶつが落ちます。</li>
+    <li><strong>PC：</strong>マウスを左右に動かし、クリックでどうぶつを落とします。</li>
+    <li>同じどうぶつが触れると合体してより大きなどうぶつに進化！</li>
+    <li>どうぶつが上のラインを超えたままになるとゲームオーバー。</li>
+    <li>名前を登録してランキングに挑戦しよう！</li>
+  </ul>
+
+  <h2>🐾 しんかひょう</h2>
+  <div class="animalEvolution">
+    <span>🐥</span><span class="evoArrow">→</span>
+    <span>🐰</span><span class="evoArrow">→</span>
+    <span>🐱</span><span class="evoArrow">→</span>
+    <span>🐶</span><span class="evoArrow">→</span>
+    <span>🐨</span><span class="evoArrow">→</span>
+    <span>🐼</span><span class="evoArrow">→</span>
+    <span>🦁</span><span class="evoArrow">→</span>
+    <span>🐘</span><span class="evoArrow">→</span>
+    <span>🦕</span><span class="evoArrow">→</span>
+    <span>🐉</span>
+  </div>
+  <p>全10種類のどうぶつが登場。同じどうぶつを合わせるたびにポイントが加算されます。大きなどうぶつを合体させるほど高得点！</p>
+
+  <h2>🏆 ランキング機能</h2>
+  <p>ゲームオーバー時にニックネームを登録すると、オンラインランキングに参加できます。全期間ランキング・デイリーランキング・最近の記録の3つのモードがあります。友達と競い合おう！</p>
+
+  <h2>📱 ホーム画面への追加</h2>
+  <p>iOSのSafariでは「共有」→「ホーム画面に追加」でアプリのようにプレイできます。Androidでも同様にホーム画面へ追加が可能です。</p>
+
+  <h2>📧 お問い合わせ</h2>
+  <p>ご意見・ご要望・不具合報告は <a href="mailto:caisuiz839@gmail.com" style="color:#c084fc;">caisuiz839@gmail.com</a> までお気軽にご連絡ください。</p>
+</div>
+
+<footer id="pageFooter">
+  <div>
+    <a href="/privacy.html">プライバシーポリシー</a>
+    <a href="/terms.html">利用規約</a>
+    <a href="mailto:caisuiz839@gmail.com">お問い合わせ</a>
+  </div>
+  <div style="margin-top:8px;">© 2026 どうぶつドロップ</div>
+</footer>
+
+</div><!-- /gameArea -->
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
