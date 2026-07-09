@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>このサイトについて｜どうぶつドロップ</title>
+  <meta name="description" content="どうぶつドロップの運営者情報・サイト概要・使用技術についてご紹介します。">
+  <meta property="og:title" content="このサイトについて｜どうぶつドロップ">
+  <meta property="og:description" content="どうぶつドロップの運営者情報・サイト概要・使用技術についてご紹介します。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://doubutsu-drop.com/about.html">
+  <meta property="og:site_name" content="どうぶつドロップ">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="このサイトについて｜どうぶつドロップ">
+  <meta name="twitter:description" content="どうぶつドロップの運営者情報・サイト概要・使用技術についてご紹介します。">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: radial-gradient(ellipse at center, #2d1b69 0%, #1a0f40 100%);
+      min-height: 100vh; color: rgba(255,255,255,0.85);
+      font-family: sans-serif; line-height: 1.8; padding: 0 0 80px;
+    }
+    .wrap { max-width: 680px; margin: 0 auto; padding: 32px 24px; }
+    header { background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(168,85,247,0.25); padding: 14px 24px; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+    .header-inner { max-width: 680px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .logo { font-size: 20px; font-weight: bold; }
+    .logo a { text-decoration: none; color: #fff; }
+    .sitenav { display: flex; gap: 16px; flex-wrap: wrap; }
+    .sitenav a { font-size: 13px; color: rgba(192,132,252,0.8); text-decoration: none; white-space: nowrap; }
+    .sitenav a:hover { color: #c084fc; }
+    h1 { font-size: 22px; color: #c084fc; margin-bottom: 24px; padding-bottom: 10px; border-bottom: 1px solid rgba(192,132,252,0.3); }
+    h2 { font-size: 16px; color: #a78bfa; margin: 28px 0 10px; padding-left: 10px; border-left: 3px solid #a855f7; }
+    p { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 10px; }
+    ul { padding-left: 20px; margin-bottom: 10px; }
+    li { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 6px; }
+    a { color: #c084fc; }
+    .info-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+    .info-table th { width: 130px; padding: 10px 14px; background: rgba(168,85,247,0.15); color: rgba(255,255,255,0.6); text-align: left; font-weight: normal; vertical-align: top; }
+    .info-table td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); }
+    .tech-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    .tech-badge { background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); border-radius: 20px; padding: 4px 14px; font-size: 13px; color: #c084fc; }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: rgba(255,255,255,0.3); text-align: center; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo"><a href="/">🐉 どうぶつドロップ</a></div>
+    <nav class="sitenav">
+      <a href="/">トップ</a>
+      <a href="/guide.html">攻略</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/updates.html">更新履歴</a>
+      <a href="/about.html">サイトについて</a>
+      <a href="/privacy.html">プライバシー</a>
+      <a href="/terms.html">利用規約</a>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+  <h1>このサイトについて</h1>
+
+  <p>「どうぶつドロップ」は、ブラウザだけで遊べる無料のどうぶつ合体パズルゲームです。インストール不要、会員登録不要で、スマートフォン・PCどちらでもすぐに遊べます。</p>
+
+  <h2>サイト概要</h2>
+  <table class="info-table">
+    <tr><th>サイト名</th><td>どうぶつドロップ</td></tr>
+    <tr><th>URL</th><td>https://doubutsu-drop.com</td></tr>
+    <tr><th>ジャンル</th><td>ブラウザゲーム（パズル・物理シミュレーション）</td></tr>
+    <tr><th>対応環境</th><td>iOS Safari / Android Chrome / PC（Chrome・Firefox・Safari・Edge）</td></tr>
+    <tr><th>料金</th><td>完全無料（課金要素なし）</td></tr>
+    <tr><th>公開日</th><td>2026年6月</td></tr>
+  </table>
+
+  <h2>ゲームの特徴</h2>
+  <ul>
+    <li>ひよこからドラゴンまで10種類のどうぶつが登場。同じどうぶつを合体させると進化します。</li>
+    <li>物理エンジン（Matter.js）を使ったリアルなどうぶつの動きが楽しめます。</li>
+    <li>ドラゴンを2体合体させると画面全消しの大逆転ボーナスが発生。</li>
+    <li>オンラインランキングに対応。全期間・デイリー・最近の記録の3つのランキングで競えます。</li>
+    <li>ホーム画面への追加（PWA）に対応しており、アプリのように使えます。</li>
+    <li>BGMとサウンドエフェクト付き。ミュートボタンで切り替え可能です。</li>
+  </ul>
+
+  <h2>使用技術</h2>
+  <div class="tech-list">
+    <span class="tech-badge">HTML5</span>
+    <span class="tech-badge">CSS3</span>
+    <span class="tech-badge">JavaScript (ES6+)</span>
+    <span class="tech-badge">Matter.js（物理エンジン）</span>
+    <span class="tech-badge">Supabase（ランキングDB）</span>
+    <span class="tech-badge">PWA</span>
+    <span class="tech-badge">Google AdSense</span>
+    <span class="tech-badge">Cloudflare Pages</span>
+  </div>
+  <p>サーバーサイドの処理を極力排し、ブラウザ上で完結する軽量な設計にしています。Matter.jsによる物理シミュレーションで、どうぶつが自然に転がり・積み重なる動きを再現しています。</p>
+
+  <h2>運営者情報</h2>
+  <table class="info-table">
+    <tr><th>運営者</th><td>萱島菜穂</td></tr>
+    <tr><th>お問い合わせ</th><td><a href="mailto:caisuiz839@gmail.com">caisuiz839@gmail.com</a></td></tr>
+  </table>
+  <p>ご意見・ご要望・不具合報告はメールにてお気軽にお問い合わせください。いただいたフィードバックはゲームの改善に役立てています。</p>
+
+  <h2>広告について</h2>
+  <p>本サービスでは、サービスの維持・運営のためにGoogle AdSenseによる広告を掲載しています。広告収益はサーバー費用・開発費用に充てられます。</p>
+
+  <h2>関連ページ</h2>
+  <ul>
+    <li><a href="/guide.html">攻略ガイド</a> — テクニック・進化チャートの詳細解説</li>
+    <li><a href="/faq.html">よくある質問（FAQ）</a> — 遊び方・動作環境などの疑問にお答えします</li>
+    <li><a href="/updates.html">更新履歴</a> — 新機能・改善内容のお知らせ</li>
+    <li><a href="/privacy.html">プライバシーポリシー</a></li>
+    <li><a href="/terms.html">利用規約</a></li>
+  </ul>
+
+  <footer>© 2026 どうぶつドロップ ｜ <a href="/">トップ</a> ｜ <a href="/guide.html">攻略ガイド</a> ｜ <a href="/faq.html">FAQ</a> ｜ <a href="/privacy.html">プライバシーポリシー</a> ｜ <a href="/terms.html">利用規約</a> ｜ <a href="/updates.html">更新履歴</a></footer>
+</div>
+</body>
+</html>
