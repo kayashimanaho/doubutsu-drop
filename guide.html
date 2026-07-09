@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>攻略ガイド｜どうぶつドロップ</title>
+  <meta name="description" content="どうぶつドロップの攻略ガイドです。進化チャート・初心者向けテクニック・高スコアを狙う上級テクニックまで徹底解説します。">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: radial-gradient(ellipse at center, #2d1b69 0%, #1a0f40 100%);
+      min-height: 100vh; color: rgba(255,255,255,0.85);
+      font-family: sans-serif; line-height: 1.8; padding: 0 0 80px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 24px; }
+    header { background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(168,85,247,0.25); padding: 14px 24px; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+    .header-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .logo { font-size: 20px; font-weight: bold; }
+    .logo a { text-decoration: none; color: #fff; }
+    .sitenav { display: flex; gap: 16px; flex-wrap: wrap; }
+    .sitenav a { font-size: 13px; color: rgba(192,132,252,0.8); text-decoration: none; white-space: nowrap; }
+    .sitenav a:hover { color: #c084fc; }
+    h1 { font-size: 24px; color: #c084fc; margin-bottom: 8px; padding-bottom: 10px; border-bottom: 1px solid rgba(192,132,252,0.3); }
+    .lead { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 36px; }
+    h2 { font-size: 18px; color: #e9d5ff; font-weight: bold; margin: 40px 0 16px; padding-left: 12px; border-left: 4px solid #a855f7; }
+    h3 { font-size: 15px; color: #c084fc; font-weight: bold; margin: 24px 0 10px; }
+    p { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin-bottom: 12px; }
+    li { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 6px; }
+    a { color: #c084fc; }
+    .card { background: rgba(255,255,255,0.05); border-radius: 14px; padding: 20px 22px; margin-bottom: 16px; border: 1px solid rgba(168,85,247,0.15); }
+    .card-title { font-size: 15px; font-weight: bold; color: #e9d5ff; margin-bottom: 10px; }
+
+    /* 進化チャート */
+    .evo-chain { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 16px 0; }
+    .evo-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .evo-icon { font-size: 28px; line-height: 1; }
+    .evo-label { font-size: 10px; color: rgba(255,255,255,0.55); white-space: nowrap; }
+    .evo-arrow { font-size: 14px; color: rgba(168,85,247,0.6); padding: 0 2px; margin-top: -10px; }
+
+    /* 進化テーブル */
+    .evo-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+    .evo-table th { background: rgba(168,85,247,0.2); color: #e9d5ff; padding: 8px 12px; text-align: left; font-weight: bold; }
+    .evo-table td { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.75); }
+    .evo-table tr:hover td { background: rgba(255,255,255,0.04); }
+    .rank-badge { display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: rgba(168,85,247,0.3); text-align: center; line-height: 22px; font-size: 11px; font-weight: bold; color: #c084fc; margin-right: 4px; }
+
+    /* ポイントボックス */
+    .tip-box { background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); border-radius: 12px; padding: 16px 18px; margin: 16px 0; }
+    .tip-box .tip-title { font-size: 13px; font-weight: bold; color: #c084fc; margin-bottom: 8px; }
+    .tip-box p, .tip-box li { font-size: 13px; }
+    .warn-box { background: rgba(234,179,8,0.08); border: 1px solid rgba(234,179,8,0.25); border-radius: 12px; padding: 16px 18px; margin: 16px 0; }
+    .warn-box .tip-title { font-size: 13px; font-weight: bold; color: #fbbf24; margin-bottom: 8px; }
+    .warn-box p, .warn-box li { font-size: 13px; }
+    .success-box { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 12px; padding: 16px 18px; margin: 16px 0; }
+    .success-box .tip-title { font-size: 13px; font-weight: bold; color: #34d399; margin-bottom: 8px; }
+    .success-box p, .success-box li { font-size: 13px; }
+
+    /* 目次 */
+    .toc { background: rgba(255,255,255,0.04); border-radius: 14px; padding: 20px 24px; margin-bottom: 32px; }
+    .toc-title { font-size: 14px; font-weight: bold; color: #e9d5ff; margin-bottom: 12px; }
+    .toc ol { padding-left: 20px; }
+    .toc li { font-size: 13px; margin-bottom: 6px; }
+    .toc a { color: rgba(192,132,252,0.85); text-decoration: none; }
+    .toc a:hover { color: #c084fc; text-decoration: underline; }
+
+    /* レベルバッジ */
+    .level { display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 8px; margin-left: 8px; vertical-align: middle; }
+    .lv-beginner { background: #10b981; color: #fff; }
+    .lv-middle { background: #3b82f6; color: #fff; }
+    .lv-advanced { background: #a855f7; color: #fff; }
+
+    footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: rgba(255,255,255,0.3); text-align: center; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo"><a href="/">🐉 どうぶつドロップ</a></div>
+    <nav class="sitenav">
+      <a href="/">トップ</a>
+      <a href="/guide.html">攻略</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/updates.html">更新履歴</a>
+      <a href="/privacy.html">プライバシー</a>
+      <a href="/terms.html">利用規約</a>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+  <h1>攻略ガイド</h1>
+  <p class="lead">どうぶつドロップを楽しく・高スコアで遊ぶためのヒントとテクニックをまとめました。初心者から上級者まで参考にしてください。</p>
+
+  <div class="toc">
+    <div class="toc-title">📋 目次</div>
+    <ol>
+      <li><a href="#basic">ゲームの基本ルール</a></li>
+      <li><a href="#evolution">進化チャートと各どうぶつの特徴</a></li>
+      <li><a href="#beginner">初心者向けテクニック</a></li>
+      <li><a href="#intermediate">中級者向けテクニック</a></li>
+      <li><a href="#advanced">上級者向けテクニック</a></li>
+      <li><a href="#dragon">ドラゴン全消しを狙う方法</a></li>
+      <li><a href="#mistakes">よくあるミスと対策</a></li>
+      <li><a href="#ranking">ランキング上位を目指すために</a></li>
+    </ol>
+  </div>
+
+  <!-- ===== 基本ルール ===== -->
+  <h2 id="basic">1. ゲームの基本ルール</h2>
+
+  <p>どうぶつドロップは、画面上から落としたどうぶつを合体させてより大きなどうぶつに進化させるパズルゲームです。スイカゲームに似た物理シミュレーション型のゲームで、いかに大きなどうぶつを作りながら場を整えるかが腕の見せどころです。</p>
+
+  <div class="card">
+    <div class="card-title">🎮 操作方法</div>
+    <ul>
+      <li><strong>スマートフォン：</strong>画面を左右にスライドしてどうぶつの位置を決め、指を離すと落下します。</li>
+      <li><strong>PC：</strong>マウスカーソルを左右に動かして位置を決め、クリックで落下させます。</li>
+      <li>画面上部の「つぎ」ゾーンに次に落ちるどうぶつが表示されます。2手先まで考えてプレイしましょう。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚠️ ゲームオーバーの条件</div>
+    <p>どうぶつが画面上部の<strong>デンジャーライン（赤い点線）</strong>を超えた状態が<strong>2秒以上続く</strong>とゲームオーバーになります。1〜2体がはみ出しても即終了ではないので、焦らず次の一手を考える余裕があります。</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏆 スコアの仕組み</div>
+    <ul>
+      <li>どうぶつが合体するたびにスコアが加算されます。</li>
+      <li>大きなどうぶつを合体させるほど、獲得スコアも高くなります。</li>
+      <li>ドラゴン（最強）を2体合体させると<strong>全消しボーナス＋300点</strong>が入ります。</li>
+      <li>高スコアを出すには、大きなどうぶつを多く作り続けることが重要です。</li>
+    </ul>
+  </div>
+
+  <!-- ===== 進化チャート ===== -->
+  <h2 id="evolution">2. 進化チャートと各どうぶつの特徴</h2>
+
+  <p>どうぶつは全部で10段階。同じ種類が2体触れると合体して次のどうぶつに進化します。進化するほどサイズが大きくなるため、場所を取りやすくなります。</p>
+
+  <div class="evo-chain">
+    <div class="evo-item"><div class="evo-icon">🐣</div><div class="evo-label">ひよこ</div></div>
+    <div class="evo-arrow">→</div>
+    <div class="evo-item"><div class="evo-icon">🐰</div><div class="evo-label">ウサギ</div></div>
+    <div class="evo-arrow">→</div>
+    <div class="evo-item"><div class="evo-icon">🐱</div><div class="evo-label">ネコ</div></div>
+    <div class="evo-arrow">→</div>
+    <div class="evo-item"><div class="evo-icon">🐶</div><div class="evo-label">イヌ</div></div>
+    <div class="evo-arrow">→</div>
+    <div class="evo-item"><div class="evo-icon">🐨</div><div class="evo-label">コアラ</div></div>
+    <div class="evo-arrow">→</div>
+    <div class="evo-item"><div class="evo-icon">🐼</div><div class="evo-label">パンダ</div></div>
+    <div class="evo-arrow">→</div>
+    <div class="evo-item"><div class="evo-icon">🦁</div><div class="evo-label">ライオン</div></div>
+    <div class="evo-arrow">→</div>
+    <div class="evo-item"><div class="evo-icon">🐘</div><div class="evo-label">ゾウ</div></div>
+    <div class="evo-arrow">→</div>
+    <div class="evo-item"><div class="evo-icon">🦕</div><div class="evo-label">きょうりゅう</div></div>
+    <div class="evo-arrow">→</div>
+    <div class="evo-item"><div class="evo-icon">🐉</div><div class="evo-label">ドラゴン</div></div>
+  </div>
+
+  <table class="evo-table">
+    <thead>
+      <tr><th>段階</th><th>どうぶつ</th><th>サイズ感</th><th>ポイント</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="rank-badge">1</span></td><td>🐣 ひよこ</td><td>極小</td><td>最も小さく隙間に入りやすい。序盤に大量に降ってくる。</td></tr>
+      <tr><td><span class="rank-badge">2</span></td><td>🐰 ウサギ</td><td>小</td><td>ひよこより少し大きい。2体そろえやすいため序盤の主役。</td></tr>
+      <tr><td><span class="rank-badge">3</span></td><td>🐱 ネコ</td><td>小〜中</td><td>序盤〜中盤に多く出現。合体連鎖を作りやすい。</td></tr>
+      <tr><td><span class="rank-badge">4</span></td><td>🐶 イヌ</td><td>中</td><td>このあたりから場所の確保が重要になってくる。</td></tr>
+      <tr><td><span class="rank-badge">5</span></td><td>🐨 コアラ</td><td>中〜大</td><td>中盤の要。コアラ同士を隣に置けるかが中盤の勝負。</td></tr>
+      <tr><td><span class="rank-badge">6</span></td><td>🐼 パンダ</td><td>大</td><td>スペースを圧迫し始める。左右に追いやられないよう注意。</td></tr>
+      <tr><td><span class="rank-badge">7</span></td><td>🦁 ライオン</td><td>大</td><td>この段階になると場の管理が難しくなる。</td></tr>
+      <tr><td><span class="rank-badge">8</span></td><td>🐘 ゾウ</td><td>特大</td><td>画面の広い面積を占める。2体並べるには戦略が必要。</td></tr>
+      <tr><td><span class="rank-badge">9</span></td><td>🦕 きょうりゅう</td><td>超大</td><td>非常に大きく、場全体に影響する。</td></tr>
+      <tr><td><span class="rank-badge">10</span></td><td>🐉 ドラゴン</td><td>最大</td><td>2体合体で全消しボーナス。最終目標！</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ===== 初心者テクニック ===== -->
+  <h2 id="beginner">3. 初心者向けテクニック <span class="level lv-beginner">初心者</span></h2>
+
+  <h3>① 真ん中に大きなどうぶつを置かない</h3>
+  <p>大きなどうぶつを画面中央に置くと、左右どちらにも小さなどうぶつが落とせなくなります。大きなどうぶつは<strong>左端または右端</strong>に寄せて管理するのが基本です。</p>
+
+  <h3>② 同じどうぶつを近くにまとめる</h3>
+  <p>合体させるには同じ種類のどうぶつが「触れる」必要があります。バラバラに置くと合体できず、場が混雑します。同じ種類は必ず隣り合わせになるよう落とす位置を意識しましょう。</p>
+
+  <h3>③「つぎ」を常に確認する</h3>
+  <p>画面上部の「つぎ」ゾーンに次のどうぶつが表示されています。<strong>今落とすどうぶつ×次のどうぶつ</strong>の2手を考えてから落とすだけで、場の整理がずっとラクになります。</p>
+
+  <div class="tip-box">
+    <div class="tip-title">💡 初心者のうちはこれだけ意識しよう</div>
+    <ul>
+      <li>大きなどうぶつは端に寄せる</li>
+      <li>同じ種類は隣に置く</li>
+      <li>「つぎ」を必ず確認してから落とす</li>
+    </ul>
+  </div>
+
+  <h3>④ 焦って落とさない</h3>
+  <p>デンジャーラインを超えても2秒の猶予があります。焦って雑に落とすと、さらに場が乱れてゲームオーバーが早まります。落ち着いて最善の位置を探しましょう。</p>
+
+  <!-- ===== 中級テクニック ===== -->
+  <h2 id="intermediate">4. 中級者向けテクニック <span class="level lv-middle">中級者</span></h2>
+
+  <h3>① 「山」を作らない・平らにキープ</h3>
+  <p>どうぶつが特定の場所に積み上がると、上部にデッドゾーンができてしまいます。全体の高さを<strong>なるべく均一に</strong>保つよう、高い場所に小さなどうぶつを落として山を崩しましょう。</p>
+
+  <h3>② 連鎖を意識した配置</h3>
+  <p>1回の合体が別の合体を引き起こす「連鎖」を狙うと、一気にスコアが伸びます。例えば、ネコ2体を合体させてイヌが生まれ、その隣に別のイヌが置いてあれば即座にコアラになります。<strong>事前に「合体後どうなるか」を予測</strong>して配置しましょう。</p>
+
+  <h3>③ 小さなどうぶつを隙間に埋める</h3>
+  <p>大きなどうぶつが並ぶと、その間に隙間ができます。ひよこやウサギなどの小さなどうぶつを使って隙間を埋めると、全体の高さを抑えることができます。</p>
+
+  <h3>④ 左右対称を意識する</h3>
+  <p>場を左右で区切って、「左側はこのどうぶつ、右側はこのどうぶつ」と管理すると整理しやすくなります。種類ごとにゾーンを決めると連鎖も起きやすくなります。</p>
+
+  <div class="tip-box">
+    <div class="tip-title">💡 中級者の目標スコアライン</div>
+    <p>コアラ・パンダの合体を安定して作れるようになると、スコア2,000〜3,000点が見えてきます。ライオンを2体作れれば上級者の入り口です。</p>
+  </div>
+
+  <!-- ===== 上級テクニック ===== -->
+  <h2 id="advanced">5. 上級者向けテクニック <span class="level lv-advanced">上級者</span></h2>
+
+  <h3>① スタック管理（重ね置き）</h3>
+  <p>同じ種類のどうぶつを縦に重ねておき、下が合体して消えると上が落下して別の合体を引き起こす「スタック」は最大の連鎖源です。特にひよこ〜ネコの小サイズで密集したスタックを作ると、一気に大きなどうぶつが生まれます。</p>
+
+  <h3>② ゾウ・きょうりゅうの「仮置き」戦略</h3>
+  <p>大きなどうぶつ（ゾウ・きょうりゅう）が降ってきたとき、すぐに合体できない場合は<strong>角に置いて「保留」</strong>します。場の片隅に押し込んでおき、ペアが揃ったら合体させましょう。</p>
+
+  <h3>③ 落下位置の精度を上げる</h3>
+  <p>どうぶつは物理エンジンで動くため、傾斜した場所に落とすと転がります。<strong>平らな場所、または壁際</strong>に落とすと狙った位置に置きやすくなります。転がり先まで計算に入れると置き精度が上がります。</p>
+
+  <h3>④ デンジャーライン付近は「捨て置き」も有効</h3>
+  <p>場が溢れそうなとき、敢えて上部に小さなどうぶつを置いて時間を稼ぎ、その間に下の合体を済ませるテクニックがあります。ただし、置きすぎると一気にゲームオーバーになるリスクもあるため、慎重に判断しましょう。</p>
+
+  <div class="success-box">
+    <div class="tip-title">✅ 上級者が意識していること</div>
+    <ul>
+      <li>常に「3〜4手先」を読んでいる</li>
+      <li>どこに何のどうぶつがあるかを把握している</li>
+      <li>連鎖を計算してから落とす</li>
+      <li>場の「圧縮」（小さなどうぶつを合体させてスペースを作る）を絶え間なく行う</li>
+    </ul>
+  </div>
+
+  <!-- ===== ドラゴン全消し ===== -->
+  <h2 id="dragon">6. ドラゴン全消しを狙う方法</h2>
+
+  <p>🐉ドラゴンを2体合体させると、画面上の全どうぶつが消えてボーナス300点が入ります。これは苦しい場面の逆転手であり、高スコアへの近道でもあります。</p>
+
+  <h3>ドラゴン全消しへの道筋</h3>
+  <ol>
+    <li>ひよこ → ウサギ → ネコ → イヌ → コアラ → パンダ → ライオン → ゾウ → きょうりゅう → ドラゴンと10段階の進化を2周する必要があります。</li>
+    <li>きょうりゅうが2体揃った状態を作るには、それ以下の進化を両方完成させる必要があります。場の約半分を2系統の進化ラインに使うイメージです。</li>
+    <li>全消しが発動すると場がリセットされるため、その後の立て直しが楽になります。</li>
+  </ol>
+
+  <div class="tip-box">
+    <div class="tip-title">💡 全消しを狙うコツ</div>
+    <ul>
+      <li>場の「左半分」「右半分」に分けて、それぞれ別の進化ラインを育てる</li>
+      <li>ドラゴンが1体完成したら、2体目の進化を急ぐ（場を広く使える状態で）</li>
+      <li>全消し後は再びひよこからスタート。焦らず低い位置を整えることを優先する</li>
+    </ul>
+  </div>
+
+  <div class="warn-box">
+    <div class="tip-title">⚠️ 注意点</div>
+    <p>ドラゴン全消しを狙いすぎて場が溢れると本末転倒です。場が厳しくなったら全消しは諦めて、中〜大サイズの合体でスペースを作ることを優先しましょう。</p>
+  </div>
+
+  <!-- ===== よくあるミス ===== -->
+  <h2 id="mistakes">7. よくあるミスと対策</h2>
+
+  <div class="card">
+    <div class="card-title">❌ ミス①：小さなどうぶつを放置して山になる</div>
+    <p>ひよこやウサギを合体させずに積み上げると、あっという間にデンジャーラインに到達します。<strong>小さなどうぶつは優先的に合体させる</strong>か、既存のどうぶつのすぐ隣に置いて連鎖を作りましょう。</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">❌ ミス②：大きなどうぶつを中央に置く</div>
+    <p>パンダ・ライオン・ゾウを中央に置くと、左右どちらにも落とすスペースがなくなります。<strong>大きなどうぶつは必ず端に寄せて</strong>ください。</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">❌ ミス③：焦って連打してしまう</div>
+    <p>追い詰められると早くどうぶつを落とそうとしますが、考えずに落とすと状況が悪化します。<strong>2秒の猶予を最大限活用</strong>して、最善の落とし場所を確認してから落としましょう。</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">❌ ミス④：「つぎ」を見ない</div>
+    <p>今のどうぶつだけ考えて落とすと、次のどうぶつが全く合体できない状況になりがちです。必ず「つぎ」を確認し、<strong>次のどうぶつの置き場所も同時に考えながら</strong>落としましょう。</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">❌ ミス⑤：隙間に落とそうとして失敗する</div>
+    <p>狭い隙間に大きなどうぶつを落とそうとすると、引っかかってさらに場が乱れます。<strong>無理に隙間を狙わず</strong>、平らな場所や安全な端に置くことを優先しましょう。</p>
+  </div>
+
+  <!-- ===== ランキング ===== -->
+  <h2 id="ranking">8. ランキング上位を目指すために</h2>
+
+  <p>どうぶつドロップには<strong>全期間ランキング・デイリーランキング・最近の記録</strong>の3種類があります。</p>
+
+  <h3>デイリーランキングで上位を狙う</h3>
+  <p>デイリーランキングは毎日リセットされるため、全期間ランキングより上位に入りやすいです。朝一番や夜のプレイで好スコアが出たらすぐ登録しましょう。</p>
+
+  <h3>高スコアを安定して出すコツ</h3>
+  <ul>
+    <li>序盤（ひよこ〜コアラ）を丁寧に進める。ここで場を整えておくと中盤以降が楽になります。</li>
+    <li>コアラ・パンダの合体を安定させる。大きなどうぶつ同士の合体が高得点の源です。</li>
+    <li>場が厳しくなる前に「圧縮」（小どうぶつを合体させてスペースを作る）を意識する。</li>
+    <li>ドラゴン全消しが1回でも成功すると一気にスコアが上がります。チャレンジしてみましょう。</li>
+  </ul>
+
+  <div class="success-box">
+    <div class="tip-title">🏆 スコアの目安</div>
+    <ul>
+      <li><strong>〜1,000点：</strong> 初心者。イヌ・コアラの合体を意識しよう。</li>
+      <li><strong>1,000〜3,000点：</strong> 中級者。パンダ・ライオンを安定して作れている。</li>
+      <li><strong>3,000〜6,000点：</strong> 上級者。ゾウ・きょうりゅうの合体ができている。</li>
+      <li><strong>6,000点以上：</strong> エキスパート。ドラゴン全消しも視野に入る実力。</li>
+    </ul>
+  </div>
+
+  <p style="margin-top:32px;">攻略のコツをつかんだら、ぜひ<a href="/">ゲームに挑戦</a>してみてください！わからないことは<a href="/faq.html">FAQ</a>もご覧ください。</p>
+
+  <footer>© 2026 どうぶつドロップ ｜ <a href="/">トップ</a> ｜ <a href="/guide.html">攻略ガイド</a> ｜ <a href="/faq.html">FAQ</a> ｜ <a href="/privacy.html">プライバシーポリシー</a> ｜ <a href="/terms.html">利用規約</a> ｜ <a href="/updates.html">更新履歴</a></footer>
+</div>
+</body>
+</html>
