@@ -91,6 +91,7 @@
       <a href="/">トップ</a>
       <a href="/guide.html">攻略</a>
       <a href="/faq.html">FAQ</a>
+      <a href="/column.html">コラム</a>
       <a href="/updates.html">更新履歴</a>
       <a href="/about.html">サイトについて</a>
       <a href="/privacy.html">プライバシー</a>
@@ -113,6 +114,8 @@
       <li><a href="#dragon">ドラゴン全消しを狙う方法</a></li>
       <li><a href="#mistakes">よくあるミスと対策</a></li>
       <li><a href="#ranking">ランキング上位を目指すために</a></li>
+      <li><a href="#scoring">スコア計算の仕組み（三角数の法則）</a></li>
+      <li><a href="#devices">端末別の操作テクニック</a></li>
     </ol>
   </div>
 
@@ -339,9 +342,68 @@
     </ul>
   </div>
 
-  <p style="margin-top:32px;">攻略のコツをつかんだら、ぜひ<a href="/">ゲームに挑戦</a>してみてください！わからないことは<a href="/faq.html">FAQ</a>もご覧ください。</p>
+  <!-- ===== スコア計算の仕組み ===== -->
+  <h2 id="scoring">9. スコア計算の仕組み（三角数の法則）</h2>
 
-  <footer>© 2026 どうぶつドロップ ｜ <a href="/">トップ</a> ｜ <a href="/guide.html">攻略ガイド</a> ｜ <a href="/faq.html">FAQ</a> ｜ <a href="/privacy.html">プライバシーポリシー</a> ｜ <a href="/terms.html">利用規約</a> ｜ <a href="/updates.html">更新履歴</a></footer>
+  <p>どうぶつドロップのポイントは、実は<strong>「三角数」</strong>と呼ばれる数列に沿って設計されています。三角数とは「1から順に整数を足していった合計」のことで、1・3・6・10・15…という増え方をします。各どうぶつの獲得ポイントを段階順に並べると、この法則にぴったり一致しているのがわかります。</p>
+
+  <table class="evo-table">
+    <thead>
+      <tr><th>段階</th><th>どうぶつ</th><th>獲得pt</th><th>計算式（n段階目）</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="rank-badge">1</span></td><td>🐣 ひよこ</td><td>1pt</td><td>1</td></tr>
+      <tr><td><span class="rank-badge">2</span></td><td>🐰 ウサギ</td><td>3pt</td><td>1+2</td></tr>
+      <tr><td><span class="rank-badge">3</span></td><td>🐱 ネコ</td><td>6pt</td><td>1+2+3</td></tr>
+      <tr><td><span class="rank-badge">4</span></td><td>🐶 イヌ</td><td>10pt</td><td>1+2+3+4</td></tr>
+      <tr><td><span class="rank-badge">5</span></td><td>🐨 コアラ</td><td>15pt</td><td>1+2+3+4+5</td></tr>
+      <tr><td><span class="rank-badge">6</span></td><td>🐼 パンダ</td><td>21pt</td><td>〜+6</td></tr>
+      <tr><td><span class="rank-badge">7</span></td><td>🦁 ライオン</td><td>28pt</td><td>〜+7</td></tr>
+      <tr><td><span class="rank-badge">8</span></td><td>🐘 ゾウ</td><td>36pt</td><td>〜+8</td></tr>
+      <tr><td><span class="rank-badge">9</span></td><td>🦕 きょうりゅう</td><td>45pt</td><td>〜+9</td></tr>
+      <tr><td><span class="rank-badge">10</span></td><td>🐉 ドラゴン</td><td>55pt</td><td>〜+10</td></tr>
+    </tbody>
+  </table>
+
+  <p>数式で書くと、n段階目のどうぶつのポイントは <strong>n×(n+1)÷2</strong> になります。例えばドラゴン（10段階目）なら 10×11÷2＝55pt です。この設計のおかげで「大きなどうぶつほど合体の価値が跳ね上がる」バランスが生まれ、序盤の小さな合体をコツコツ積み上げるか、大きな合体を狙って一気に稼ぐかという駆け引きが生まれます。</p>
+
+  <div class="tip-box">
+    <div class="tip-title">💡 三角数を知ると見えてくること</div>
+    <ul>
+      <li>ひよこ10匹分（10pt）を稼ぐより、コアラ1匹（15pt）を作る方が効率的</li>
+      <li>ドラゴン1匹（55pt）は、ひよこ55匹合体分に相当する超高効率どうぶつ</li>
+      <li>だからこそ上級者ほど「大きなどうぶつを絶やさず作り続ける」ことを意識している</li>
+    </ul>
+  </div>
+
+  <!-- ===== 端末別テクニック ===== -->
+  <h2 id="devices">10. 端末別の操作テクニック</h2>
+
+  <p>どうぶつドロップはスマートフォンとPCの両方に対応していますが、入力方法が異なるため、それぞれに合った操作のコツがあります。</p>
+
+  <h3>📱 スマートフォンでのコツ</h3>
+  <ul>
+    <li>指先が画面を隠してしまうため、<strong>落下位置の少し上を狙って押す</strong>と正確に置きやすくなります。</li>
+    <li>画面を強く押しすぎると意図せず動いてしまうことがあるため、軽いタッチでゆっくりスライドするのがおすすめです。</li>
+    <li>端末を横向きにすると操作しづらくなる場合があるため、縦画面での固定プレイを推奨します。</li>
+    <li>通知バナーが画面上部に出るとデンジャーラインの視認性が下がるため、集中したいときは機内モードやおやすみモードの利用も検討しましょう。</li>
+  </ul>
+
+  <h3>💻 PCでのコツ</h3>
+  <ul>
+    <li>マウスの方がスマホより細かい位置調整がしやすいため、<strong>ピクセル単位の位置合わせ</strong>を意識するとスコアが伸びやすくなります。</li>
+    <li>トラックパッドを使用している場合はカーソル移動が滑りやすいため、マウス操作の方が安定してプレイできます。</li>
+    <li>ブラウザの拡大率（Ctrl+ / Ctrl-）を100%に戻すと、盤面のサイズ感がずれずに正確な操作がしやすくなります。</li>
+  </ul>
+
+  <div class="warn-box">
+    <div class="tip-title">⚠️ 共通の注意点</div>
+    <p>タブを切り替えたりバックグラウンドで放置すると、ブラウザによってはゲームの動作が一時停止・遅延することがあります。集中してプレイする際は他のタブやアプリを閉じておくと快適です。</p>
+  </div>
+
+  <p style="margin-top:32px;">攻略のコツをつかんだら、ぜひ<a href="/">ゲームに挑戦</a>してみてください！わからないことは<a href="/faq.html">FAQ</a>もご覧ください。どうぶつドロップの成り立ちに興味がある方は<a href="/column.html">コラム：スイカゲームとの違い</a>もぜひどうぞ。</p>
+
+  <footer>© 2026 どうぶつドロップ ｜ <a href="/">トップ</a> ｜ <a href="/guide.html">攻略ガイド</a> ｜ <a href="/faq.html">FAQ</a> ｜ <a href="/column.html">コラム</a> ｜ <a href="/privacy.html">プライバシーポリシー</a> ｜ <a href="/terms.html">利用規約</a> ｜ <a href="/updates.html">更新履歴</a></footer>
 </div>
 </body>
 </html>
