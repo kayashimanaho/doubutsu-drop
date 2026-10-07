@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>進化チャートとスコア設計で悩んだこと｜コラム｜どうぶつドロップ</title>
+  <meta name="description" content="どうぶつドロップの進化チャート（ひよこ〜ドラゴン）とスコア計算に三角数を採用した理由、ゲームオーバー条件の調整など、ゲームデザインの試行錯誤を開発者が振り返ります。">
+  <meta property="og:title" content="進化チャートとスコア設計で悩んだこと｜コラム｜どうぶつドロップ">
+  <meta property="og:description" content="進化チャートやスコア計算に三角数を採用した理由など、ゲームデザインの試行錯誤を開発者が振り返ります。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://doubutsu-drop.com/column-design.html">
+  <meta property="og:site_name" content="どうぶつドロップ">
+  <meta property="og:image" content="https://doubutsu-drop.com/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://doubutsu-drop.com/ogp.png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: radial-gradient(ellipse at center, #2d1b69 0%, #1a0f40 100%);
+      min-height: 100vh; color: rgba(255,255,255,0.85);
+      font-family: sans-serif; line-height: 1.8; padding: 0 0 80px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 24px; }
+    header { background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(168,85,247,0.25); padding: 14px 24px; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+    .header-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .logo { font-size: 20px; font-weight: bold; }
+    .logo a { text-decoration: none; color: #fff; }
+    .sitenav { display: flex; gap: 16px; flex-wrap: wrap; }
+    .sitenav a { font-size: 13px; color: rgba(192,132,252,0.8); text-decoration: none; white-space: nowrap; }
+    .sitenav a:hover { color: #c084fc; }
+    h1 { font-size: 24px; color: #c084fc; margin-bottom: 8px; padding-bottom: 10px; border-bottom: 1px solid rgba(192,132,252,0.3); }
+    .lead { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 36px; }
+    h2 { font-size: 18px; color: #e9d5ff; font-weight: bold; margin: 40px 0 16px; padding-left: 12px; border-left: 4px solid #a855f7; }
+    h3 { font-size: 15px; color: #c084fc; font-weight: bold; margin: 24px 0 10px; }
+    p { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 12px; }
+    ul, ol { padding-left: 22px; margin-bottom: 12px; }
+    li { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 6px; }
+    a { color: #c084fc; }
+    .card { background: rgba(255,255,255,0.05); border-radius: 14px; padding: 20px 22px; margin-bottom: 16px; border: 1px solid rgba(168,85,247,0.15); }
+    .card-title { font-size: 15px; font-weight: bold; color: #e9d5ff; margin-bottom: 10px; }
+    .tip-box { background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); border-radius: 12px; padding: 16px 18px; margin: 16px 0; }
+    .tip-box .tip-title { font-size: 13px; font-weight: bold; color: #c084fc; margin-bottom: 8px; }
+    .tip-box p, .tip-box li { font-size: 13px; }
+    .warn-box { background: rgba(234,179,8,0.08); border: 1px solid rgba(234,179,8,0.25); border-radius: 12px; padding: 16px 18px; margin: 16px 0; }
+    .warn-box .tip-title { font-size: 13px; font-weight: bold; color: #fbbf24; margin-bottom: 8px; }
+    .warn-box p, .warn-box li { font-size: 13px; }
+    .score-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+    .score-table th { background: rgba(168,85,247,0.2); color: #e9d5ff; padding: 8px 12px; text-align: left; font-weight: bold; }
+    .score-table td { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.75); font-variant-numeric: tabular-nums; }
+    .score-table tr:last-child td { border-bottom: none; font-weight: bold; color: #ffe090; }
+    footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: rgba(255,255,255,0.3); text-align: center; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo"><a href="/">🐉 どうぶつドロップ</a></div>
+    <nav class="sitenav">
+      <a href="/">トップ</a>
+      <a href="/guide.html">攻略</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/column.html">コラム</a>
+      <a href="/updates.html">更新履歴</a>
+      <a href="/about.html">サイトについて</a>
+      <a href="/privacy.html">プライバシー</a>
+      <a href="/terms.html">利用規約</a>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+  <p style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:20px;"><a href="/column.html" style="color:rgba(192,132,252,0.7);text-decoration:none;">← コラム一覧に戻る</a></p>
+  <h1>進化チャートとスコア設計で悩んだこと</h1>
+  <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:4px;">2026年8月1日</p>
+  <p class="lead">どうぶつドロップの開発で最も時間をかけたのは物理エンジンの調整ではなく、「どうぶつを何種類にするか」「合体したときに何点もらえるか」というゲームデザインの根幹部分でした。試行錯誤の過程を振り返ります。</p>
+
+  <h2>進化チャート：なぜ10種類にしたか</h2>
+
+  <p>最初のプロトタイプでは7種類のどうぶつで試しました。「ひよこ・ネコ・イヌ・コアラ・パンダ・ゾウ・ドラゴン」というラインナップです。しかしプレイしてみると、<strong>ゲームの時間軸が短すぎる</strong>という問題がありました。7種類だと盤面の密度が増すのが早く、序盤の「小さなどうぶつを積み上げる」楽しさを味わうまもなくゲームオーバーになってしまいます。</p>
+
+  <p>逆に12種類以上に増やすと今度は<strong>最大サイズのどうぶつが大きくなりすぎて</strong>、盤面に2体以上入らなくなります。物理ゲームとして見たとき、最大サイズのどうぶつが画面幅の約3分の1を占める状態が望ましく、それを満たす段階数として10が適切でした。</p>
+
+  <p>動物の選定にも悩みました。条件は3つです。</p>
+  <ul>
+    <li>子どもが名前を知っている動物（認知負荷を下げる）</li>
+    <li>大きさのイメージが直感的に伝わる順番（小→大の成長感）</li>
+    <li>最後に「伝説・最強」のイメージで終わること（到達感の演出）</li>
+  </ul>
+
+  <p>この3条件から「ひよこ→ウサギ→ネコ→イヌ→コアラ→パンダ→ライオン→ゾウ→きょうりゅう→ドラゴン」というチャートになりました。コアラとパンダの位置は何度か入れ替えましたが、「パンダの方が少し大きい」という直感とサイズ設定（コアラr=58、パンダr=70）が一致したため現在の順序に落ち着いています。</p>
+
+  <h2>スコア設計：なぜ三角数を選んだか</h2>
+
+  <h3>最初の失敗：等差スコア</h3>
+
+  <p>最初はシンプルに「合体するたびに10点」「段階が上がるたびに+10点」という等差設計にしていました。ひよこ合体で10点、ウサギ合体で20点……という具合です。しかしこれは<strong>ドラゴンを作るインセンティブが弱い</strong>という問題を生みました。</p>
+
+  <p>等差設計だとドラゴン（10段階目・100点）を1体作るより、ひよこ（1段階目・10点）を10回合体させる方が同じ点数で盤面を圧迫しません。上を目指すより小さなどうぶつを連発した方が効率的になってしまうのです。</p>
+
+  <h3>指数スコアの試行と問題</h3>
+
+  <p>次に「段階ごとに2倍」という指数設計を試しました。ひよこ1点・ウサギ2点・ネコ4点……ドラゴン512点。しかし今度は逆の問題が起きました。<strong>序盤のスコアがほぼ0に近くなり、大きなどうぶつを作るまでゲームが始まった気がしない</strong>のです。プレイヤーがスコアの伸びを感じるのはライオン（7段階目・64点）あたりからになってしまい、それまでの体験がフラットすぎました。</p>
+
+  <h3>三角数：程よい加速度</h3>
+
+  <p>最終的に採用したのが<strong>三角数（triangular number）</strong>です。三角数とは 1, 3, 6, 10, 15, 21, 28, 36, 45, 55 … という数列で、n番目の値は n×(n+1)÷2 で求まります。</p>
+
+  <table class="score-table">
+    <thead>
+      <tr><th>段階</th><th>どうぶつ</th><th>合体時ポイント（三角数）</th><th>等差との比較</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>🐥 ひよこ</td><td>1 pt</td><td>10 pt（等差）</td></tr>
+      <tr><td>2</td><td>🐰 ウサギ</td><td>3 pt</td><td>20 pt</td></tr>
+      <tr><td>3</td><td>🐱 ネコ</td><td>6 pt</td><td>30 pt</td></tr>
+      <tr><td>5</td><td>🐨 コアラ</td><td>15 pt</td><td>50 pt</td></tr>
+      <tr><td>7</td><td>🦁 ライオン</td><td>28 pt</td><td>70 pt</td></tr>
+      <tr><td>9</td><td>🦕 きょうりゅう</td><td>45 pt</td><td>90 pt</td></tr>
+      <tr><td>10</td><td>🐉 ドラゴン</td><td>55 pt</td><td>100 pt</td></tr>
+    </tbody>
+  </table>
+
+  <p>等差に比べて序盤のポイントは小さいですが、段階が上がるにつれて差が縮まり、終盤では逆転します。重要なのは<strong>「大きなどうぶつを1体作る方が、小さなどうぶつを量産するよりも明確に効率が良い」という戦略的優位性が数式に組み込まれている</strong>点です。</p>
+
+  <p>また、三角数はプログラムコードが非常にシンプルです。</p>
+
+  <div style="background:rgba(0,0,0,0.35);border:1px solid rgba(168,85,247,0.2);border-radius:10px;padding:16px 18px;margin:16px 0;font-family:'SFMono-Regular','Consolas',monospace;font-size:13px;color:#c4b5fd;line-height:1.7;overflow-x:auto;">
+// n段階目のポイント = n×(n+1)÷2
+// どうぶつ定義の配列に直書き
+const A = [
+  { name:'ひよこ', r:20, pts: 1  },  // 1×2÷2
+  { name:'ウサギ', r:28, pts: 3  },  // 2×3÷2
+  { name:'ネコ',   r:37, pts: 6  },  // 3×4÷2
+  // ...
+  { name:'ドラゴン',r:128,pts: 55 }, // 10×11÷2
+];
+  </div>
+
+  <h2>ゲームオーバー条件：2秒の猶予</h2>
+
+  <p>ゲームオーバーの条件は「デンジャーラインを超えたどうぶつが存在する」ではなく、<strong>「デンジャーラインを超えた状態が2秒以上継続する」</strong>にしています。この違いが意外に重要でした。</p>
+
+  <p>落下直後のどうぶつは一瞬デンジャーラインを超えることがあります。瞬間判定にすると、落とした瞬間にゲームオーバーになる理不尽な状況が生まれます。2秒の猶予を設けることで「落としたけど合体でうまく収まった」という逆転体験が生まれ、プレイの緊張感が高まりました。</p>
+
+  <div class="warn-box">
+    <div class="tip-title">⚠️ 没になった要素：ボム</div>
+    <p>開発途中、デンジャーラインを超えたどうぶつを消す「ボム」アイテムを実装していました。盤面が厳しくなったときの救済手段として設けたのですが、実際にプレイしてみると<strong>ボムの出現頻度の調整が非常に難しい</strong>ことが分かりました。多すぎると難易度が下がりすぎ、少なすぎると存在に気づかないまま終わります。結局「ドラゴン全消し」という自然な逆転手段を強化する方向で代替し、ボムは削除しました。</p>
+  </div>
+
+  <h2>ドラゴン全消しボーナスの設計</h2>
+
+  <p>ドラゴン2体の合体で盤面を全消しする機能は、ゲームバランス上の「救済手段」として設計しました。合体パズルの後半は盤面が詰まりやすく、そのままゲームオーバーになるしかない局面が増えます。ドラゴン全消しがあることで「今は苦しくてもドラゴンを育てれば逆転できる」という長期目標が生まれ、諦めずにプレイが続けられるようになりました。</p>
+
+  <p>ボーナス点数は300点に設定しています。これはドラゴン1体を作るために必要なポイント総量（全どうぶつのポイントを一度ずつ獲得すると約200点）より少し多い数字です。全消しで一気に逆転できるほど大きくはなく、しかし「やってよかった」と感じられる程度の存在感を持つよう調整しました。</p>
+
+  <div class="tip-box">
+    <div class="tip-title">💡 まとめ：ゲームデザインで学んだこと</div>
+    <ul>
+      <li>進化チャートの種類数は「ゲームの時間軸」と「最大サイズの視認性」で決まる</li>
+      <li>等差スコアは直感的だが「大きなどうぶつを目指す理由」が生まれにくい</li>
+      <li>三角数は「序盤の楽しさ」と「終盤の戦略性」を両立できる加速度を持つ</li>
+      <li>ゲームオーバー判定に猶予を持たせると理不尽感が激減する</li>
+      <li>救済手段はアイテムより「ゲームの目標そのもの」に内包させると自然になる</li>
+    </ul>
+  </div>
+
+  <p style="margin-top:32px;">スコア計算の具体的な数値は<a href="/guide.html#scoring">攻略ガイドのスコア計算セクション</a>で確認できます。物理エンジンの実装については<a href="/column-physics.html">Matter.jsをブラウザゲームに採用した理由</a>をご覧ください。</p>
+
+  <div style="margin-top:48px;padding:20px 22px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:14px;">
+    <p style="font-size:13px;font-weight:bold;color:#c084fc;margin-bottom:12px;">📚 他のコラムも読む</p>
+    <ul style="list-style:none;padding:0;">
+      <li style="margin-bottom:8px;"><a href="/column-suika.html">どうぶつドロップとスイカゲームの違い</a></li>
+      <li style="margin-bottom:8px;"><a href="/column-physics.html">Matter.jsをブラウザゲームに採用した理由——物理エンジンの選定と実装の話</a></li>
+    </ul>
+    <p style="font-size:13px;margin-top:8px;"><a href="/column.html">← コラム一覧へ</a></p>
+  </div>
+
+  <footer>© 2026 どうぶつドロップ ｜ <a href="/">トップ</a> ｜ <a href="/guide.html">攻略ガイド</a> ｜ <a href="/faq.html">FAQ</a> ｜ <a href="/column.html">コラム</a> ｜ <a href="/privacy.html">プライバシーポリシー</a> ｜ <a href="/terms.html">利用規約</a> ｜ <a href="/updates.html">更新履歴</a></footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matter.jsをブラウザゲームに採用した理由｜コラム｜どうぶつドロップ</title>
+  <meta name="description" content="どうぶつドロップの開発で物理エンジンMatter.jsを選んだ経緯と、ブラウザゲームに物理シミュレーションを組み込む際に直面した課題、パラメータ調整の実際を開発者が解説します。">
+  <meta property="og:title" content="Matter.jsをブラウザゲームに採用した理由｜コラム｜どうぶつドロップ">
+  <meta property="og:description" content="物理エンジンMatter.jsを選んだ経緯と、ブラウザゲームへの組み込みで直面した課題を開発者が解説します。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://doubutsu-drop.com/column-physics.html">
+  <meta property="og:site_name" content="どうぶつドロップ">
+  <meta property="og:image" content="https://doubutsu-drop.com/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://doubutsu-drop.com/ogp.png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: radial-gradient(ellipse at center, #2d1b69 0%, #1a0f40 100%);
+      min-height: 100vh; color: rgba(255,255,255,0.85);
+      font-family: sans-serif; line-height: 1.8; padding: 0 0 80px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 24px; }
+    header { background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(168,85,247,0.25); padding: 14px 24px; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+    .header-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .logo { font-size: 20px; font-weight: bold; }
+    .logo a { text-decoration: none; color: #fff; }
+    .sitenav { display: flex; gap: 16px; flex-wrap: wrap; }
+    .sitenav a { font-size: 13px; color: rgba(192,132,252,0.8); text-decoration: none; white-space: nowrap; }
+    .sitenav a:hover { color: #c084fc; }
+    h1 { font-size: 24px; color: #c084fc; margin-bottom: 8px; padding-bottom: 10px; border-bottom: 1px solid rgba(192,132,252,0.3); }
+    .lead { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 36px; }
+    h2 { font-size: 18px; color: #e9d5ff; font-weight: bold; margin: 40px 0 16px; padding-left: 12px; border-left: 4px solid #a855f7; }
+    h3 { font-size: 15px; color: #c084fc; font-weight: bold; margin: 24px 0 10px; }
+    p { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 12px; }
+    ul, ol { padding-left: 22px; margin-bottom: 12px; }
+    li { font-size: 14px; color: rgba(255,255,255,0.75); margin-bottom: 6px; }
+    a { color: #c084fc; }
+    .card { background: rgba(255,255,255,0.05); border-radius: 14px; padding: 20px 22px; margin-bottom: 16px; border: 1px solid rgba(168,85,247,0.15); }
+    .card-title { font-size: 15px; font-weight: bold; color: #e9d5ff; margin-bottom: 10px; }
+    .tip-box { background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); border-radius: 12px; padding: 16px 18px; margin: 16px 0; }
+    .tip-box .tip-title { font-size: 13px; font-weight: bold; color: #c084fc; margin-bottom: 8px; }
+    .tip-box p, .tip-box li { font-size: 13px; }
+    .code-block { background: rgba(0,0,0,0.35); border: 1px solid rgba(168,85,247,0.2); border-radius: 10px; padding: 16px 18px; margin: 16px 0; font-family: 'SFMono-Regular', 'Consolas', monospace; font-size: 13px; color: #c4b5fd; line-height: 1.7; overflow-x: auto; }
+    .param-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+    .param-table th { background: rgba(168,85,247,0.2); color: #e9d5ff; padding: 8px 12px; text-align: left; font-weight: bold; }
+    .param-table td { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); color: rgba(255,255,255,0.75); vertical-align: top; }
+    footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: rgba(255,255,255,0.3); text-align: center; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="logo"><a href="/">🐉 どうぶつドロップ</a></div>
+    <nav class="sitenav">
+      <a href="/">トップ</a>
+      <a href="/guide.html">攻略</a>
+      <a href="/faq.html">FAQ</a>
+      <a href="/column.html">コラム</a>
+      <a href="/updates.html">更新履歴</a>
+      <a href="/about.html">サイトについて</a>
+      <a href="/privacy.html">プライバシー</a>
+      <a href="/terms.html">利用規約</a>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+  <p style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:20px;"><a href="/column.html" style="color:rgba(192,132,252,0.7);text-decoration:none;">← コラム一覧に戻る</a></p>
+  <h1>Matter.jsをブラウザゲームに採用した理由</h1>
+  <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:4px;">2026年7月3日</p>
+  <p class="lead">どうぶつドロップはブラウザだけで動く完全フロントエンドのゲームです。どうぶつたちが転がり・積み重なるリアルな動きを実現するために物理エンジンを使っていますが、「なぜMatter.jsを選んだのか」「組み込む際に何に苦労したか」を開発者の目線で振り返ります。</p>
+
+  <h2>なぜ物理エンジンが必要だったか</h2>
+
+  <p>合体パズルゲームを自前のコードだけで実装しようとすると、円同士の衝突判定・摩擦・重力・積み重なったときの安定化……と、物理シミュレーションに必要な計算が非常に多くなります。最初は「衝突したら位置を修正する」程度の簡易実装で始めましたが、すぐに限界を感じました。</p>
+
+  <p>問題のひとつが<strong>トンネリング</strong>です。小さなひよこが高速で落下したとき、フレームとフレームの間に床をすり抜けて消えてしまうことがありました。また、どうぶつが重なって積み上がるとき、お互いが振動してガタガタ揺れ続ける現象（スタック不安定性）も頻発しました。こうした問題を自力で解決するのは、ゲームロジック本体の開発とは別に相当な工数がかかります。既存の物理エンジンを使うことで、これらの問題をまとめて解決できると判断しました。</p>
+
+  <h2>Matter.jsを選んだ理由</h2>
+
+  <p>ブラウザ向けの2D物理エンジンはいくつかあります。代表的なものを比較した上でMatter.jsを選びました。</p>
+
+  <table class="param-table">
+    <thead>
+      <tr><th>ライブラリ</th><th>特徴</th><th>どうぶつドロップへの適性</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Matter.js</td><td>ピュアJavaScript、依存なし、ドキュメント充実</td><td>◎ 軽量で外部依存がない</td></tr>
+      <tr><td>Cannon.js / cannon-es</td><td>3D物理が得意、WebGL向け</td><td>△ 2Dゲームには過剰</td></tr>
+      <tr><td>Box2D（emscripten版）</td><td>非常に高精度、ゲーム業界標準</td><td>△ wasm読み込みのオーバーヘッドが大きい</td></tr>
+      <tr><td>Planck.js</td><td>Box2DのJSポート、軽量</td><td>○ 候補に入ったが情報量でMatter.jsが上</td></tr>
+    </tbody>
+  </table>
+
+  <p>決め手は<strong>「外部依存ゼロで使えること」と「日本語を含む情報量の多さ」</strong>でした。どうぶつドロップはサーバーレスで動くシンプルな構成なので、wasm（WebAssembly）のような追加バンドルなしにCDNから1ファイル読み込むだけで済むMatter.jsは、今回の要件に最もフィットしていました。</p>
+
+  <h2>実装で直面した課題と解決策</h2>
+
+  <h3>1. トンネリング対策</h3>
+
+  <p>小さな物体が高速で移動するとき、衝突判定フレームをすり抜けるトンネリングは、Matter.jsのデフォルト設定でも稀に発生しました。どうぶつドロップでの対処は2つです。</p>
+
+  <ul>
+    <li><strong>床を200pxの厚みに設定する：</strong>見た目の床ラインは画面下部に描画しつつ、物理ボディとしての床は200px厚の矩形にしました。こうすることで、どんな高速落下でも床をすり抜けることがなくなります。</li>
+    <li><strong>positionIterationsを増やす：</strong>衝突解決の反復回数をデフォルトの6から10に増やし、衝突の精度を高めています。処理コストはわずかに増えますが、現代のスマートフォンで体感できるほどの差はありませんでした。</li>
+  </ul>
+
+  <div class="code-block">Engine.create({
+  gravity: { y: 1.2 },
+  positionIterations: 10,  // デフォルト6→10
+  velocityIterations: 8,   // デフォルト4→8
+})</div>
+
+  <h3>2. 積み重なり時のガタつき抑制</h3>
+
+  <p>どうぶつ同士が積み重なったとき、お互いが微妙に押し合って永遠に揺れ続ける問題がありました。これはrestitution（反発係数）とfriction（摩擦係数）のバランスが悪いと起きます。</p>
+
+  <p>何度もプレイしながら数値を調整した結果、以下の値に落ち着きました。</p>
+
+  <table class="param-table">
+    <thead>
+      <tr><th>パラメータ</th><th>値</th><th>意図</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>restitution（反発係数）</td><td>0.22</td><td>ほど良い弾み。0に近づけるとプラスチックっぽく、大きすぎると跳ね回る</td></tr>
+      <tr><td>friction（摩擦係数）</td><td>0.65</td><td>転がりすぎを防ぎ、積み重なりを安定させる</td></tr>
+      <tr><td>frictionAir（空気抵抗）</td><td>0.025</td><td>落下速度を少し緩め、操作感をやわらかくする</td></tr>
+      <tr><td>density（密度）</td><td>0.003</td><td>軽すぎると浮き、重すぎると落下が速すぎる</td></tr>
+    </tbody>
+  </table>
+
+  <p>特に<strong>frictionAirの値が操作感に大きく影響</strong>することが分かりました。スマートフォンで指を離してからどうぶつが落ちるまでのわずかな時間に、ユーザーが「ちゃんと操作できている」と感じるかどうかが変わります。0に近づけると落下がシャープで爽快になりますが、入力のシビアさが増して子ども向けには難しくなりました。</p>
+
+  <h3>3. 合体処理のタイミング問題</h3>
+
+  <p>Matter.jsの衝突イベントは「物体が重なった瞬間」に発火しますが、その瞬間に即座に2つのボディを削除して1つの新しいボディを生成すると、物理ワールドが不安定になるケースがありました。</p>
+
+  <p>解決策として、合体処理を<code>setTimeout(..., 30)</code>で30ミリ秒遅延させています。この一手間で、物理ワールドが現在のフレームを処理し終えてから変更が加わるようになり、安定しました。</p>
+
+  <div class="code-block">Events.on(engine, 'collisionStart', e => {
+  for (const { bodyA, bodyB } of e.pairs) {
+    if (bodyA.atype !== bodyB.atype) continue;
+    bodyA.merged = bodyB.merged = true;
+
+    setTimeout(() => {
+      // 30ms後にボディ入れ替え → 物理ワールドが安定
+      World.remove(world, bodyA);
+      World.remove(world, bodyB);
+      const newBody = mkAnimal(midX, midY, bodyA.atype + 1);
+      Body.setVelocity(newBody, { x: 0, y: -4 });
+    }, 30);
+  }
+});</div>
+
+  <h2>描画はMatter.jsのRendererを使わなかった理由</h2>
+
+  <p>Matter.jsにはデフォルトのレンダラーが付属していますが、どうぶつドロップでは使っていません。理由は<strong>絵文字の描画</strong>です。デフォルトレンダラーはCanvas APIのシンプルな図形描画を前提としており、絵文字を各ボディの中央に表示するカスタマイズが難しいためです。</p>
+
+  <p>代わりに、Matter.jsを物理計算エンジンとして使い、毎フレーム<code>requestAnimationFrame</code>で自前のCanvas描画ループを回すアーキテクチャにしました。<code>world.bodies</code>から各どうぶつの位置と角度を取得し、その座標に合わせて絵文字と円を描画しています。</p>
+
+  <div class="code-block">// 物理計算（Matter.js）
+Runner.run(runner, engine);
+
+// 描画（自前のCanvas）
+function loop(now) {
+  for (const b of world.bodies) {
+    if (b.label !== 'animal') continue;
+    ctx.save();
+    ctx.translate(b.position.x, b.position.y);
+    ctx.rotate(b.angle);
+    drawAnimal(0, 0, b.circleRadius, b.atype);
+    ctx.restore();
+  }
+  requestAnimationFrame(loop);
+}</div>
+
+  <p>この構成により、物理シミュレーションの精度を保ちながら、絵文字を回転させたりグラデーション円を描いたりといった自由な演出が可能になりました。</p>
+
+  <div class="tip-box">
+    <div class="tip-title">💡 まとめ</div>
+    <ul>
+      <li>物理エンジンは自前実装のトンネリング・スタック問題を解決するために導入した</li>
+      <li>Matter.jsを選んだ決め手は「外部依存ゼロ」と「情報量の多さ」</li>
+      <li>床の厚み・positionIterations増加でトンネリングを対策した</li>
+      <li>摩擦・反発係数は操作感に直結するため、実際のプレイで繰り返し調整した</li>
+      <li>描画は自前のCanvasループを使い、Matter.jsは物理計算専用に分離した</li>
+    </ul>
+  </div>
+
+  <p style="margin-top:32px;">ゲーム設計の別の側面については<a href="/column-design.html">進化チャートとスコア設計で悩んだこと</a>にもまとめています。実際にゲームを動かしてみたい方は<a href="/">どうぶつドロップ</a>をどうぞ。</p>
+
+  <div style="margin-top:48px;padding:20px 22px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:14px;">
+    <p style="font-size:13px;font-weight:bold;color:#c084fc;margin-bottom:12px;">📚 他のコラムも読む</p>
+    <ul style="list-style:none;padding:0;">
+      <li style="margin-bottom:8px;"><a href="/column-suika.html">どうぶつドロップとスイカゲームの違い</a></li>
+      <li style="margin-bottom:8px;"><a href="/column-design.html">進化チャートとスコア設計で悩んだこと——どうぶつドロップのゲームデザイン舞台裏</a></li>
+    </ul>
+    <p style="font-size:13px;margin-top:8px;"><a href="/column.html">← コラム一覧へ</a></p>
+  </div>
+
+  <footer>© 2026 どうぶつドロップ ｜ <a href="/">トップ</a> ｜ <a href="/guide.html">攻略ガイド</a> ｜ <a href="/faq.html">FAQ</a> ｜ <a href="/column.html">コラム</a> ｜ <a href="/privacy.html">プライバシーポリシー</a> ｜ <a href="/terms.html">利用規約</a> ｜ <a href="/updates.html">更新履歴</a></footer>
+</div>
+</body>
+</html>
