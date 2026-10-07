@@ -21,6 +21,21 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://doubutsu-drop.com/column-suika.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://doubutsu-drop.com/column-physics.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://doubutsu-drop.com/column-design.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://doubutsu-drop.com/about.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
