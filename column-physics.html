@@ -15,6 +15,33 @@
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://doubutsu-drop.com/ogp.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Matter.jsをブラウザゲームに採用した理由",
+    "description": "どうぶつドロップの開発で物理エンジンMatter.jsを選んだ経緯と、ブラウザゲームに物理シミュレーションを組み込む際に直面した課題、パラメータ調整の実際を開発者が解説します。",
+    "url": "https://doubutsu-drop.com/column-physics.html",
+    "datePublished": "2026-07-03",
+    "dateModified": "2026-07-03",
+    "author": {
+      "@type": "Person",
+      "name": "萱島菜穂",
+      "url": "https://doubutsu-drop.com/about.html"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "どうぶつドロップ",
+      "url": "https://doubutsu-drop.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://doubutsu-drop.com/ogp.png"
+      }
+    },
+    "image": "https://doubutsu-drop.com/ogp.png",
+    "inLanguage": "ja"
+  }
+  </script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -69,7 +96,7 @@
 <div class="wrap">
   <p style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:20px;"><a href="/column.html" style="color:rgba(192,132,252,0.7);text-decoration:none;">← コラム一覧に戻る</a></p>
   <h1>Matter.jsをブラウザゲームに採用した理由</h1>
-  <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:4px;">2026年7月3日</p>
+  <p style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:4px;">2026年7月3日　著者：<a href="/about.html" style="color:rgba(192,132,252,0.6);text-decoration:none;">萱島菜穂</a></p>
   <p class="lead">どうぶつドロップはブラウザだけで動く完全フロントエンドのゲームです。どうぶつたちが転がり・積み重なるリアルな動きを実現するために物理エンジンを使っていますが、「なぜMatter.jsを選んだのか」「組み込む際に何に苦労したか」を開発者の目線で振り返ります。</p>
 
   <h2>なぜ物理エンジンが必要だったか</h2>
